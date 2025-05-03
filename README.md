@@ -1,3 +1,3 @@
-# School Management Desktop App
+# Manajemen Sekolah Desktop App
 
 Initial Maven-based Java Swing application.
