@@ -91,4 +91,26 @@ public class JadwalModel {
 
         return list;
     }
+
+    // ✅ Method tambahan untuk mendapatkan ID berdasarkan nama dari tabel
+    public int getIdByName(String table, String field, String value) {
+        int id = -1;
+        String sql = "SELECT id FROM " + table + " WHERE " + field + " = ?";
+
+        try (Connection conn = Koneksi.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, value);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                id = rs.getInt("id");
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return id;
+    }
 }

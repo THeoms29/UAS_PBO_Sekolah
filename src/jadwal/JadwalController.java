@@ -4,7 +4,8 @@ import jadwal.JadwalModel;
 import javax.swing.*;
 import java.awt.event.*;
 import java.util.ArrayList;
-import java.io.FileOutputStream;
+import java.io.*;
+import java.util.HashMap;
 
 import com.itextpdf.text.*;
 import com.itextpdf.text.pdf.*;
@@ -22,6 +23,7 @@ public class JadwalController {
         view.setSimpanAction(e -> simpanJadwal());
         view.setExportPDFAction(e -> eksporKePDF());
         view.setComboKelasAction(e -> tampilkanJadwal());
+        view.setImporCSVAction(e -> imporDariCSV()); // ➕ Tambahan ini
     }
 
     private void isiCombo() {
@@ -123,6 +125,62 @@ public class JadwalController {
         } catch (Exception e) {
             e.printStackTrace();
             JOptionPane.showMessageDialog(view, "Gagal membuat PDF: " + e.getMessage());
+        }
+    }
+
+    // 🔽 Fungsi tambahan untuk impor CSV
+    private void imporDariCSV() {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle("Pilih file CSV");
+        int result = chooser.showOpenDialog(view);
+        if (result != JFileChooser.APPROVE_OPTION) return;
+
+        File file = chooser.getSelectedFile();
+
+        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+            String line;
+            int kelasId = getId(view.comboKelas);
+            if (kelasId == -1) {
+                JOptionPane.showMessageDialog(view, "Pilih kelas terlebih dahulu sebelum impor.");
+                return;
+            }
+
+            int berhasil = 0, gagal = 0;
+            while ((line = br.readLine()) != null) {
+                String[] parts = line.split(",");
+                if (parts.length != 4) continue;
+
+                String hari = parts[0].trim();
+                int jamKe;
+                try {
+                    jamKe = Integer.parseInt(parts[1].trim());
+                } catch (NumberFormatException e) {
+                    gagal++;
+                    continue;
+                }
+
+                String mapel = parts[2].trim();
+                String guru = parts[3].trim();
+
+                int mapelId = model.getIdByName("mapel", "nama_mapel", mapel);
+                int guruId = model.getIdByName("users", "nama", guru);
+
+                if (mapelId == -1 || guruId == -1 || model.isBentrok(kelasId, hari, jamKe)) {
+                    gagal++;
+                    continue;
+                }
+
+                boolean sukses = model.simpanJadwal(kelasId, mapelId, guruId, hari, jamKe);
+                if (sukses) berhasil++;
+                else gagal++;
+            }
+
+            JOptionPane.showMessageDialog(view,
+                "Import selesai.\nBerhasil: " + berhasil + "\nGagal: " + gagal);
+            tampilkanJadwal();
+
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(view, "Gagal membaca file: " + e.getMessage());
         }
     }
 

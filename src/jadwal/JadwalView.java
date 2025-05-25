@@ -9,7 +9,7 @@ public class JadwalView extends JFrame {
 
     public JComboBox<String> comboKelas, comboMapel, comboGuru, comboHari;
     public JTextField fieldJamKe;
-    public JButton btnSimpan, btnExportPDF;
+    public JButton btnSimpan, btnExportPDF, btnImporCSV;
     public JTable tableJadwal;
     public DefaultTableModel modelTabel;
 
@@ -19,6 +19,7 @@ public class JadwalView extends JFrame {
         setLayout(null);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 
+        // Inisialisasi komponen
         comboKelas = new JComboBox<>();
         comboMapel = new JComboBox<>();
         comboGuru = new JComboBox<>();
@@ -27,24 +28,50 @@ public class JadwalView extends JFrame {
 
         btnSimpan = new JButton("Simpan");
         btnExportPDF = new JButton("Ekspor PDF");
+        btnImporCSV = new JButton("Impor dari CSV");
 
-        JLabel l1 = new JLabel("Kelas"), l2 = new JLabel("Mapel"), l3 = new JLabel("Guru"),
-                l4 = new JLabel("Hari"), l5 = new JLabel("Jam Ke");
+        // Label
+        JLabel l1 = new JLabel("Kelas");
+        JLabel l2 = new JLabel("Mapel");
+        JLabel l3 = new JLabel("Guru");
+        JLabel l4 = new JLabel("Hari");
+        JLabel l5 = new JLabel("Jam Ke");
 
-        int y = 20;
-        for (Component c : new Component[]{l1, comboKelas, l2, comboMapel, l3, comboGuru, l4, comboHari, l5, fieldJamKe, btnSimpan, btnExportPDF}) {
-            c.setBounds(30, y, 250, 25);
-            add(c);
-            y += 30;
-        }
+        // Posisi Label dan Input
+        l1.setBounds(30, 20, 100, 25);
+        comboKelas.setBounds(150, 20, 200, 25);
 
-        btnSimpan.setBounds(300, 230, 120, 25);
-        btnExportPDF.setBounds(430, 230, 120, 25);
+        l2.setBounds(30, 50, 100, 25);
+        comboMapel.setBounds(150, 50, 200, 25);
 
+        l3.setBounds(30, 80, 100, 25);
+        comboGuru.setBounds(150, 80, 200, 25);
+
+        l4.setBounds(30, 110, 100, 25);
+        comboHari.setBounds(150, 110, 200, 25);
+
+        l5.setBounds(30, 140, 100, 25);
+        fieldJamKe.setBounds(150, 140, 200, 25);
+
+        btnSimpan.setBounds(380, 50, 120, 30);
+        btnExportPDF.setBounds(380, 90, 120, 30);
+        btnImporCSV.setBounds(380, 130, 150, 30);
+
+        // Tambahkan semua komponen
+        add(l1); add(comboKelas);
+        add(l2); add(comboMapel);
+        add(l3); add(comboGuru);
+        add(l4); add(comboHari);
+        add(l5); add(fieldJamKe);
+        add(btnSimpan);
+        add(btnExportPDF);
+        add(btnImporCSV);
+
+        // Tabel
         modelTabel = new DefaultTableModel(new String[]{"Hari", "Jam Ke", "Mapel", "Guru"}, 0);
         tableJadwal = new JTable(modelTabel);
         JScrollPane scrollPane = new JScrollPane(tableJadwal);
-        scrollPane.setBounds(30, 270, 580, 170);
+        scrollPane.setBounds(30, 200, 580, 230);
         add(scrollPane);
     }
 
@@ -59,5 +86,9 @@ public class JadwalView extends JFrame {
 
     public void setComboKelasAction(ActionListener action) {
         comboKelas.addActionListener(action);
+    }
+
+    public void setImporCSVAction(ActionListener action) {
+        btnImporCSV.addActionListener(action);
     }
 }
