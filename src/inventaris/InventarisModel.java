@@ -8,7 +8,7 @@ import java.util.List;
 public class InventarisModel {
     public List<Object[]>getDataInventaris(){
         List<Object[]>data=new ArrayList<>();
-        try(Connection conn=Koneksi.getKoneksi()){
+        try(Connection conn=Koneksi.getConnection()){
             String query="SELECT*FROM inventaris";
             PreparedStatement stmt=conn.prepareStatement(query);
             ResultSet rs=stmt.executeQuery();
@@ -27,7 +27,7 @@ public class InventarisModel {
         return data;
     }
     public void tambahInventaris(String nama,String lokasi,int jumlah,String kondisi){
-        try(Connection conn=Koneksi.getKoneksi()){
+        try(Connection conn=Koneksi.getConnection()){
             String sql="INSERT INTO inventaris (nama_barang, lokasi, jumlah, kondisi) VALUES (?, ?, ?, ?)";
             PreparedStatement ps=conn.prepareStatement(sql);
             ps.setString(1, nama);
@@ -40,7 +40,7 @@ public class InventarisModel {
         }
     }
     public void updateInventaris(int id,String nama,String lokasi,int jumlah,String kondisi){
-        try(Connection conn=Koneksi.getKoneksi()){
+        try(Connection conn=Koneksi.getConnection()){
             String sql="UPDATE inventaris SET nama_barang=?, lokasi=?, jumlah=?, kondisi=? WHERE id=?";
             PreparedStatement ps=conn.prepareStatement(sql);
             ps.setString(1, nama);
@@ -54,7 +54,7 @@ public class InventarisModel {
         }
     }
     public void hapusInventaris(int id){
-        try(Connection conn=Koneksi.getKoneksi()){
+        try(Connection conn=Koneksi.getConnection()){
             String sql="DELETE FROM inventaris WHERE id=?";
             PreparedStatement ps=conn.prepareStatement(sql);
             ps.setInt(1,id);
