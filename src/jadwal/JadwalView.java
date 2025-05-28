@@ -2,14 +2,13 @@ package jadwal;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
-import java.awt.*;
 import java.awt.event.ActionListener;
 
 public class JadwalView extends JFrame {
 
     public JComboBox<String> comboKelas, comboMapel, comboGuru, comboHari;
     public JTextField fieldJamKe;
-    public JButton btnSimpan, btnExportPDF, btnImporCSV;
+    public JButton btnSimpan, btnExportPDF, btnImporCSV, btnTambahMapel;
     public JTable tableJadwal;
     public DefaultTableModel modelTabel;
 
@@ -29,6 +28,8 @@ public class JadwalView extends JFrame {
         btnSimpan = new JButton("Simpan");
         btnExportPDF = new JButton("Ekspor PDF");
         btnImporCSV = new JButton("Impor dari CSV");
+        btnTambahMapel = new JButton("Tambah Mapel"); // <== ini ditambah
+
 
         // Label
         JLabel l1 = new JLabel("Kelas");
@@ -56,6 +57,7 @@ public class JadwalView extends JFrame {
         btnSimpan.setBounds(380, 50, 120, 30);
         btnExportPDF.setBounds(380, 90, 120, 30);
         btnImporCSV.setBounds(380, 130, 150, 30);
+        btnTambahMapel.setBounds(380, 170, 150,30);
 
         // Tambahkan semua komponen
         add(l1); add(comboKelas);
@@ -66,6 +68,7 @@ public class JadwalView extends JFrame {
         add(btnSimpan);
         add(btnExportPDF);
         add(btnImporCSV);
+        add(btnTambahMapel);
 
         // Tabel
         modelTabel = new DefaultTableModel(new String[]{"Hari", "Jam Ke", "Mapel", "Guru"}, 0);
@@ -91,4 +94,9 @@ public class JadwalView extends JFrame {
     public void setImporCSVAction(ActionListener action) {
         btnImporCSV.addActionListener(action);
     }
+
+    public void setTambahMapelAction(ActionListener al) {
+    btnTambahMapel.addActionListener(al);
+}
+
 }

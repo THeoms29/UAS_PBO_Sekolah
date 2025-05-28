@@ -6,7 +6,8 @@ import java.util.ArrayList;
 
 public class JadwalModel {
 
-    public ArrayList<String> getComboData(String table, String column) {
+    // ✅ Ambil data untuk combo box (format: "1 - Nama")
+    public ArrayList<String> getComboDataWithId(String table, String column) {
         ArrayList<String> list = new ArrayList<>();
         String sql = "SELECT id, " + column + " FROM " + table;
 
@@ -24,6 +25,26 @@ public class JadwalModel {
         return list;
     }
 
+    // ✅ Format combo yang hanya ambil id & nama dalam array
+    public ArrayList<String[]> getComboDataWithId(String table, String idField, String nameField) {
+        ArrayList<String[]> list = new ArrayList<>();
+        String sql = "SELECT " + idField + ", " + nameField + " FROM " + table;
+
+        try (Connection conn = Koneksi.getConnection();
+             Statement st = conn.createStatement();
+             ResultSet rs = st.executeQuery(sql)) {
+
+            while (rs.next()) {
+                list.add(new String[]{rs.getString(idField), rs.getString(nameField)});
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return list;
+    }
+
+    // ✅ Cek apakah jadwal bentrok
     public boolean isBentrok(int kelasId, String hari, int jamKe) {
         try (Connection conn = Koneksi.getConnection()) {
             String sql = "SELECT * FROM jadwal WHERE kelas_id=? AND hari=? AND jam_ke=?";
@@ -32,13 +53,14 @@ public class JadwalModel {
             ps.setString(2, hari);
             ps.setInt(3, jamKe);
             ResultSet rs = ps.executeQuery();
-            return rs.next(); // true jika sudah ada (bentrok)
+            return rs.next(); // true kalau sudah ada (bentrok)
         } catch (Exception e) {
             e.printStackTrace();
             return true;
         }
     }
 
+    // ✅ Simpan jadwal baru
     public boolean simpanJadwal(int kelasId, int mapelId, int guruId, String hari, int jamKe) {
         String sql = "INSERT INTO jadwal (kelas_id, mapel_id, guru_id, hari, jam_ke) VALUES (?, ?, ?, ?, ?)";
 
@@ -58,6 +80,20 @@ public class JadwalModel {
         }
     }
 
+    // ✅ Tambah data baru ke tabel (digunakan saat user tambah mapel baru)
+    public boolean tambahData(String tabel, String kolom, String nilai) {
+        try (Connection conn = Koneksi.getConnection()) {
+            String query = "INSERT INTO " + tabel + " (" + kolom + ") VALUES (?)";
+            PreparedStatement ps = conn.prepareStatement(query);
+            ps.setString(1, nilai);
+            return ps.executeUpdate() > 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    // ✅ Ambil data jadwal berdasarkan kelas
     public ArrayList<String[]> getJadwalByKelas(int kelasId) {
         ArrayList<String[]> list = new ArrayList<>();
 
@@ -92,7 +128,7 @@ public class JadwalModel {
         return list;
     }
 
-    // ✅ Method tambahan untuk mendapatkan ID berdasarkan nama dari tabel
+    // ✅ Ambil ID berdasarkan nama (contoh: ID mapel dari nama)
     public int getIdByName(String table, String field, String value) {
         int id = -1;
         String sql = "SELECT id FROM " + table + " WHERE " + field + " = ?";

@@ -1,12 +1,9 @@
 package jadwal;
 
-import jadwal.JadwalModel;
+// ✅ FIXED: Tambahkan import yang diperlukan
 import javax.swing.*;
-import java.awt.event.*;
 import java.util.ArrayList;
 import java.io.*;
-import java.util.HashMap;
-
 import com.itextpdf.text.*;
 import com.itextpdf.text.pdf.*;
 
@@ -23,18 +20,37 @@ public class JadwalController {
         view.setSimpanAction(e -> simpanJadwal());
         view.setExportPDFAction(e -> eksporKePDF());
         view.setComboKelasAction(e -> tampilkanJadwal());
-        view.setImporCSVAction(e -> imporDariCSV()); // ➕ Tambahan ini
+        view.setImporCSVAction(e -> imporDariCSV());
+
+        // ✅ FIXED: Pindahkan kode ini ke dalam constructor agar tidak error
+        view.setTambahMapelAction(e -> {
+            String namaMapelBaru = JOptionPane.showInputDialog(view, "Nama Mapel Baru:");
+            if (namaMapelBaru != null && !namaMapelBaru.trim().isEmpty()) {
+                boolean sukses = model.tambahData("mapel", "nama_mapel", namaMapelBaru.trim());
+                if (sukses) {
+                    JOptionPane.showMessageDialog(view, "Mapel berhasil ditambahkan!");
+                    isiCombo(); // refresh semua comboBox
+                } else {
+                    JOptionPane.showMessageDialog(view, "Gagal menambahkan mapel!");
+                }
+            }
+        });
     }
 
     private void isiCombo() {
-        ArrayList<String> kelas = model.getComboData("kelas", "nama_kelas");
-        for (String k : kelas) view.comboKelas.addItem(k);
+        view.comboKelas.removeAllItems();
+        view.comboMapel.removeAllItems();
+        view.comboGuru.removeAllItems();
 
-        ArrayList<String> mapel = model.getComboData("mapel", "nama_mapel");
-        for (String m : mapel) view.comboMapel.addItem(m);
+        // ✅ FIXED: Gunakan parameter sesuai dengan method model yang benar
+        ArrayList<String[]> kelas = model.getComboDataWithId("kelas", "id", "nama_kelas");
+        for (String[] k : kelas) view.comboKelas.addItem(k[0] + " - " + k[1]);
 
-        ArrayList<String> guru = model.getComboData("users", "nama");
-        for (String g : guru) view.comboGuru.addItem(g);
+        ArrayList<String[]> mapel = model.getComboDataWithId("mapel", "id", "nama_mapel");
+        for (String[] m : mapel) view.comboMapel.addItem(m[0] + " - " + m[1]);
+
+        ArrayList<String[]> guru = model.getComboDataWithId("users", "id", "nama");
+        for (String[] g : guru) view.comboGuru.addItem(g[0] + " - " + g[1]);
 
         if (view.comboKelas.getItemCount() > 0) tampilkanJadwal();
     }
@@ -128,7 +144,6 @@ public class JadwalController {
         }
     }
 
-    // 🔽 Fungsi tambahan untuk impor CSV
     private void imporDariCSV() {
         JFileChooser chooser = new JFileChooser();
         chooser.setDialogTitle("Pilih file CSV");
@@ -176,7 +191,7 @@ public class JadwalController {
             }
 
             JOptionPane.showMessageDialog(view,
-                "Import selesai.\nBerhasil: " + berhasil + "\nGagal: " + gagal);
+                    "Import selesai.\nBerhasil: " + berhasil + "\nGagal: " + gagal);
             tampilkanJadwal();
 
         } catch (IOException e) {
