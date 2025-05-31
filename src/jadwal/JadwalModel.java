@@ -1,152 +1,140 @@
 package jadwal;
 
-import shared.Koneksi;
 import java.sql.*;
-import java.util.ArrayList;
+import java.util.*;
+
+import shared.Koneksi;
 
 public class JadwalModel {
+    private Connection conn;
 
-    // ✅ Ambil data untuk combo box (format: "1 - Nama")
-    public ArrayList<String> getComboDataWithId(String table, String column) {
-        ArrayList<String> list = new ArrayList<>();
-        String sql = "SELECT id, " + column + " FROM " + table;
+    public JadwalModel() {
+        this.conn = Koneksi.getConnection();
+    }
 
-        try (Connection conn = Koneksi.getConnection();
-             Statement st = conn.createStatement();
-             ResultSet rs = st.executeQuery(sql)) {
-
+    public List<String[]> getAllKelas() throws SQLException {
+        List<String[]> list = new ArrayList<>();
+        String sql = "SELECT id, nama_kelas FROM kelas";
+        try (PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
-                list.add(rs.getInt("id") + " - " + rs.getString(column));
+                list.add(new String[]{rs.getString("id"), rs.getString("nama_kelas")});
             }
-        } catch (Exception e) {
-            e.printStackTrace();
         }
-
         return list;
     }
 
-    // ✅ Format combo yang hanya ambil id & nama dalam array
-    public ArrayList<String[]> getComboDataWithId(String table, String idField, String nameField) {
-        ArrayList<String[]> list = new ArrayList<>();
-        String sql = "SELECT " + idField + ", " + nameField + " FROM " + table;
-
-        try (Connection conn = Koneksi.getConnection();
-             Statement st = conn.createStatement();
-             ResultSet rs = st.executeQuery(sql)) {
-
+    public List<String[]> getAllMapel() throws SQLException {
+        List<String[]> list = new ArrayList<>();
+        String sql = "SELECT id, nama_mapel FROM mapel";
+        try (PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
-                list.add(new String[]{rs.getString(idField), rs.getString(nameField)});
+                list.add(new String[]{rs.getString("id"), rs.getString("nama_mapel")});
             }
-        } catch (Exception e) {
-            e.printStackTrace();
         }
-
         return list;
     }
 
-    // ✅ Cek apakah jadwal bentrok
-    public boolean isBentrok(int kelasId, String hari, int jamKe) {
-        try (Connection conn = Koneksi.getConnection()) {
-            String sql = "SELECT * FROM jadwal WHERE kelas_id=? AND hari=? AND jam_ke=?";
-            PreparedStatement ps = conn.prepareStatement(sql);
-            ps.setInt(1, kelasId);
-            ps.setString(2, hari);
-            ps.setInt(3, jamKe);
-            ResultSet rs = ps.executeQuery();
-            return rs.next(); // true kalau sudah ada (bentrok)
-        } catch (Exception e) {
-            e.printStackTrace();
-            return true;
-        }
-    }
-
-    // ✅ Simpan jadwal baru
-    public boolean simpanJadwal(int kelasId, int mapelId, int guruId, String hari, int jamKe) {
-        String sql = "INSERT INTO jadwal (kelas_id, mapel_id, guru_id, hari, jam_ke) VALUES (?, ?, ?, ?, ?)";
-
-        try (Connection conn = Koneksi.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-
-            ps.setInt(1, kelasId);
-            ps.setInt(2, mapelId);
-            ps.setInt(3, guruId);
-            ps.setString(4, hari);
-            ps.setInt(5, jamKe);
-            ps.executeUpdate();
-            return true;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
-        }
-    }
-
-    // ✅ Tambah data baru ke tabel (digunakan saat user tambah mapel baru)
-    public boolean tambahData(String tabel, String kolom, String nilai) {
-        try (Connection conn = Koneksi.getConnection()) {
-            String query = "INSERT INTO " + tabel + " (" + kolom + ") VALUES (?)";
-            PreparedStatement ps = conn.prepareStatement(query);
-            ps.setString(1, nilai);
-            return ps.executeUpdate() > 0;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
-        }
-    }
-
-    // ✅ Ambil data jadwal berdasarkan kelas
-    public ArrayList<String[]> getJadwalByKelas(int kelasId) {
-        ArrayList<String[]> list = new ArrayList<>();
-
-        String sql = """
-            SELECT j.hari, j.jam_ke, m.nama_mapel, u.nama
-            FROM jadwal j
-            JOIN mapel m ON j.mapel_id = m.id
-            JOIN users u ON j.guru_id = u.id
-            WHERE j.kelas_id = ?
-            ORDER BY FIELD(j.hari,'Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'), j.jam_ke
-        """;
-
-        try (Connection conn = Koneksi.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-
-            ps.setInt(1, kelasId);
-            ResultSet rs = ps.executeQuery();
-
+    public List<String[]> getAllGuru() throws SQLException {
+        List<String[]> list = new ArrayList<>();
+        String sql = "SELECT id, nama FROM users WHERE role = 'guru'";
+        try (PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
-                list.add(new String[]{
-                    rs.getString("hari"),
-                    String.valueOf(rs.getInt("jam_ke")),
-                    rs.getString("nama_mapel"),
-                    rs.getString("nama")
-                });
+                list.add(new String[]{rs.getString("id"), rs.getString("nama")});
             }
-
-        } catch (Exception e) {
-            e.printStackTrace();
         }
-
         return list;
     }
 
-    // ✅ Ambil ID berdasarkan nama (contoh: ID mapel dari nama)
-    public int getIdByName(String table, String field, String value) {
-        int id = -1;
-        String sql = "SELECT id FROM " + table + " WHERE " + field + " = ?";
-
-        try (Connection conn = Koneksi.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-
-            ps.setString(1, value);
+    public boolean isBentrok(String hari, int jamKe, int kelasId, int guruId) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM jadwal WHERE hari = ? AND jam_ke = ? AND (kelas_id = ? OR guru_id = ?)";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, hari);
+            ps.setInt(2, jamKe);
+            ps.setInt(3, kelasId);
+            ps.setInt(4, guruId);
             ResultSet rs = ps.executeQuery();
-
             if (rs.next()) {
-                id = rs.getInt("id");
+                return rs.getInt(1) > 0;
             }
-
-        } catch (Exception e) {
-            e.printStackTrace();
         }
+        return false;
+    }
 
-        return id;
+    public void insertJadwal(String hari, int jamKe, int kelasId, int mapelId, int guruId) throws SQLException {
+        String sql = "INSERT INTO jadwal (hari, jam_ke, kelas_id, mapel_id, guru_id) VALUES (?, ?, ?, ?, ?)";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, hari);
+            ps.setInt(2, jamKe);
+            ps.setInt(3, kelasId);
+            ps.setInt(4, mapelId);
+            ps.setInt(5, guruId);
+            ps.executeUpdate();
+        }
+    }
+
+    public List<String[]> getJadwalByKelas(int kelasId) throws SQLException {
+        List<String[]> list = new ArrayList<>();
+        String sql = "SELECT hari, jam_ke, m.nama_mapel, u.nama FROM jadwal j JOIN mapel m ON j.mapel_id = m.id JOIN users u ON j.guru_id = u.id WHERE j.kelas_id = ? ORDER BY hari, jam_ke";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, kelasId);
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                list.add(new String[]{rs.getString("hari"), rs.getString("jam_ke"), rs.getString("nama_mapel"), rs.getString("nama")});
+            }
+        }
+        return list;
+    }
+
+    public List<String[]> getJadwalByGuru(int guruId) throws SQLException {
+        List<String[]> list = new ArrayList<>();
+        String sql = "SELECT hari, jam_ke, k.nama_kelas, m.nama_mapel FROM jadwal j JOIN kelas k ON j.kelas_id = k.id JOIN mapel m ON j.mapel_id = m.id WHERE j.guru_id = ? ORDER BY hari, jam_ke";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, guruId);
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                list.add(new String[]{rs.getString("hari"), rs.getString("jam_ke"), rs.getString("nama_kelas"), rs.getString("nama_mapel")});
+            }
+        }
+        return list;
+    }
+
+    // Helper methods untuk import CSV
+    public int getKelasIdByName(String namaKelas) throws SQLException {
+        String sql = "SELECT id FROM kelas WHERE nama_kelas = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, namaKelas);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt("id");
+            }
+        }
+        return -1; // Tidak ditemukan
+    }
+
+    public int getMapelIdByName(String namaMapel) throws SQLException {
+        String sql = "SELECT id FROM mapel WHERE nama_mapel = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, namaMapel);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt("id");
+            }
+        }
+        return -1; // Tidak ditemukan
+    }
+
+    public int getGuruIdByName(String namaGuru) throws SQLException {
+        String sql = "SELECT id FROM users WHERE nama = ? AND role = 'guru'";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, namaGuru);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt("id");
+            }
+        }
+        return -1; // Tidak ditemukan
     }
 }
