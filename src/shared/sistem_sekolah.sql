@@ -28,21 +28,7 @@ CREATE TABLE `absensi` (
   PRIMARY KEY (`id`),
   KEY `siswa_id` (`siswa_id`),
   CONSTRAINT `absensi_ibfk_1` FOREIGN KEY (`siswa_id`) REFERENCES `siswa` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
-/*Data for the table `absensi` */
-
-insert  into `absensi`(`id`,`siswa_id`,`tanggal`,`status`) values 
-(6,1,'2025-05-16','Izin'),
-(7,2,'2025-05-16','Sakit'),
-(8,3,'2025-05-16','Alpha'),
-(9,4,'2025-05-16','Hadir'),
-(10,5,'2025-05-16','Hadir'),
-(11,1,'2025-05-17','Izin'),
-(12,2,'2025-05-17','Hadir'),
-(13,3,'2025-05-17','Hadir'),
-(14,4,'2025-05-17','Sakit'),
-(15,5,'2025-05-17','Hadir');
+) ENGINE=InnoDB AUTO_INCREMENT=32 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 /*Table structure for table `buku` */
 
@@ -54,21 +40,7 @@ CREATE TABLE `buku` (
   `penulis` varchar(100) DEFAULT NULL,
   `jumlah` int DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
-/*Data for the table `buku` */
-
-insert  into `buku`(`id`,`judul`,`penulis`,`jumlah`) values 
-(1,'Pemrograman Java Dasar','Andi Prasetyo',5),
-(2,'Struktur Data dan Algoritma','Budi Santoso',3),
-(3,'Basis Data Lanjutan','Citra Lestari',4),
-(4,'Pengantar Jaringan Komputer','Dedi Kurniawan',6),
-(5,'Desain UI/UX Modern','Eka Putri',2),
-(6,'Matematika Diskrit','Fajar Nugroho',3),
-(7,'Kecerdasan Buatan','Gina Marlina',5),
-(8,'Sistem Operasi','Heri Setiawan',4),
-(9,'Pemrograman Web','Intan Pramesti',7),
-(10,'Etika Profesi IT','Joko Susilo',3);
+) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 /*Table structure for table `inventaris` */
 
@@ -81,9 +53,7 @@ CREATE TABLE `inventaris` (
   `jumlah` int DEFAULT NULL,
   `kondisi` enum('Baik','Rusak','Hilang') DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
-/*Data for the table `inventaris` */
+) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 /*Table structure for table `jadwal` */
 
@@ -103,9 +73,7 @@ CREATE TABLE `jadwal` (
   CONSTRAINT `jadwal_ibfk_1` FOREIGN KEY (`kelas_id`) REFERENCES `kelas` (`id`),
   CONSTRAINT `jadwal_ibfk_2` FOREIGN KEY (`mapel_id`) REFERENCES `mapel` (`id`),
   CONSTRAINT `jadwal_ibfk_3` FOREIGN KEY (`guru_id`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
-/*Data for the table `jadwal` */
+) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 /*Table structure for table `kelas` */
 
@@ -115,14 +83,7 @@ CREATE TABLE `kelas` (
   `id` int NOT NULL AUTO_INCREMENT,
   `nama_kelas` varchar(50) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
-/*Data for the table `kelas` */
-
-insert  into `kelas`(`id`,`nama_kelas`) values 
-(1,'X IPA 1'),
-(2,'X IPA 2'),
-(3,'X IPS 1');
+) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 /*Table structure for table `mapel` */
 
@@ -132,9 +93,7 @@ CREATE TABLE `mapel` (
   `id` int NOT NULL AUTO_INCREMENT,
   `nama_mapel` varchar(100) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
-/*Data for the table `mapel` */
+) ENGINE=InnoDB AUTO_INCREMENT=25 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 /*Table structure for table `nilai` */
 
@@ -154,9 +113,7 @@ CREATE TABLE `nilai` (
   KEY `mapel_id` (`mapel_id`),
   CONSTRAINT `nilai_ibfk_1` FOREIGN KEY (`siswa_id`) REFERENCES `siswa` (`id`),
   CONSTRAINT `nilai_ibfk_2` FOREIGN KEY (`mapel_id`) REFERENCES `mapel` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
-/*Data for the table `nilai` */
+) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 /*Table structure for table `peminjaman` */
 
@@ -175,14 +132,7 @@ CREATE TABLE `peminjaman` (
   KEY `buku_id` (`buku_id`),
   CONSTRAINT `peminjaman_ibfk_1` FOREIGN KEY (`siswa_id`) REFERENCES `siswa` (`id`),
   CONSTRAINT `peminjaman_ibfk_2` FOREIGN KEY (`buku_id`) REFERENCES `buku` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
-/*Data for the table `peminjaman` */
-
-insert  into `peminjaman`(`id`,`siswa_id`,`buku_id`,`tanggal_pinjam`,`tanggal_kembali`,`tanggal_dikembalikan`,`denda`) values 
-(2,2,5,'2025-05-18','2025-05-22','2025-05-23',1000),
-(3,1,3,'2025-05-18','2025-05-18','2025-05-25',7000),
-(4,14,9,'2025-05-18','2025-05-18','2025-05-18',0);
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 /*Table structure for table `siswa` */
 
@@ -197,26 +147,7 @@ CREATE TABLE `siswa` (
   UNIQUE KEY `nis` (`nis`),
   KEY `kelas_id` (`kelas_id`),
   CONSTRAINT `siswa_ibfk_1` FOREIGN KEY (`kelas_id`) REFERENCES `kelas` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
-/*Data for the table `siswa` */
-
-insert  into `siswa`(`id`,`nama`,`nis`,`kelas_id`) values 
-(1,'Alya Putri','1001',1),
-(2,'Budi Santoso','1002',1),
-(3,'Citra Dewi','1003',1),
-(4,'Dedi Irawan','1004',1),
-(5,'Eka Lestari','1005',1),
-(6,'Fajar Nugraha','2001',2),
-(7,'Gita Nuraini','2002',2),
-(8,'Hadi Prasetyo','2003',2),
-(9,'Indah Wulandari','2004',2),
-(10,'Joko Sembiring','2005',2),
-(11,'Kiki Ramadhani','3001',3),
-(12,'Lutfi Hakim','3002',3),
-(13,'Maya Sari','3003',3),
-(14,'Niko Wijaya','3004',3),
-(15,'Ovi Rahma','3005',3);
+) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 /*Table structure for table `users` */
 
@@ -230,9 +161,7 @@ CREATE TABLE `users` (
   `role` enum('guru','staff','kepala_sekolah') NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `username` (`username`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
-/*Data for the table `users` */
+) ENGINE=InnoDB AUTO_INCREMENT=22 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
 /*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;

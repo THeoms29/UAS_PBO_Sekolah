@@ -31,6 +31,7 @@ public class PeminjamanController {
         isiComboSiswa();
         isiComboBuku();
 
+        //listener supaya saat ada perubahan langsung update tabel
         view.setSimpanAction(e -> simpanPeminjaman());
         view.setKembalikanAction(e -> prosesPengembalian());
         view.setMuatRiwayatAction(e -> tampilkanRiwayat());
