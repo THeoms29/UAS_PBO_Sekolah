@@ -2,6 +2,7 @@ package jadwal;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
+import java.awt.*;
 import java.awt.event.ActionListener;
 
 public class JadwalView extends JFrame {
@@ -10,16 +11,22 @@ public class JadwalView extends JFrame {
     public JComboBox<String> cbFilterKelas, cbFilterGuru;
     public JTextField fieldJamKe;
     public JButton btnSimpan, btnExportPDF, btnImporCSV, btnTambahMapel;
-    public JButton btnExportCSV, btnDownloadTemplate; // ✅ Tambahan tombol baru
+    public JButton btnExportCSV, btnDownloadTemplate;
     public JTable tableJadwal;
     public DefaultTableModel modelTabel;
 
     public JadwalView() {
         setTitle("Jadwal Pelajaran");
-        setSize(700, 600);
-        setLayout(null);
+        setSize(800, 700);
+        setMinimumSize(new Dimension(600, 500));
+        setLocationRelativeTo(null);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-
+        
+        initializeComponents();
+        setupLayout();
+    }
+    
+    private void initializeComponents() {
         // Inisialisasi komponen
         comboKelas = new JComboBox<>();
         comboMapel = new JComboBox<>();
@@ -33,72 +40,183 @@ public class JadwalView extends JFrame {
         btnExportPDF = new JButton("Ekspor PDF");
         btnImporCSV = new JButton("Impor dari CSV");
         btnTambahMapel = new JButton("Tambah Mapel");
+        btnExportCSV = new JButton("Ekspor CSV");
+        btnDownloadTemplate = new JButton("Download Template");
 
-        btnExportCSV = new JButton("Ekspor CSV"); // ✅ Tambahan inisialisasi
-        btnDownloadTemplate = new JButton("Download Template"); // ✅ Tambahan inisialisasi
+        // Set preferred sizes untuk konsistensi
+        Dimension comboSize = new Dimension(200, 25);
+        comboKelas.setPreferredSize(comboSize);
+        comboMapel.setPreferredSize(comboSize);
+        comboGuru.setPreferredSize(comboSize);
+        comboHari.setPreferredSize(comboSize);
+        cbFilterKelas.setPreferredSize(comboSize);
+        cbFilterGuru.setPreferredSize(comboSize);
+        fieldJamKe.setPreferredSize(comboSize);
 
-        // Label
-        JLabel l1 = new JLabel("Kelas");
-        JLabel l2 = new JLabel("Mapel");
-        JLabel l3 = new JLabel("Guru");
-        JLabel l4 = new JLabel("Hari");
-        JLabel l5 = new JLabel("Jam Ke");
-        JLabel lblFilterKelas = new JLabel("Filter Kelas");
-        JLabel lblFilterGuru = new JLabel("Filter Guru");
-
-        // Posisi Label dan Input
-        l1.setBounds(30, 20, 100, 25);
-        comboKelas.setBounds(150, 20, 200, 25);
-
-        l2.setBounds(30, 50, 100, 25);
-        comboMapel.setBounds(150, 50, 200, 25);
-
-        l3.setBounds(30, 80, 100, 25);
-        comboGuru.setBounds(150, 80, 200, 25);
-
-        l4.setBounds(30, 110, 100, 25);
-        comboHari.setBounds(150, 110, 200, 25);
-
-        l5.setBounds(30, 140, 100, 25);
-        fieldJamKe.setBounds(150, 140, 200, 25);
-
-        lblFilterKelas.setBounds(30, 170, 100, 25);
-        cbFilterKelas.setBounds(150, 170, 200, 25);
-
-        lblFilterGuru.setBounds(30, 200, 100, 25);
-        cbFilterGuru.setBounds(150, 200, 200, 25);
-
-        btnSimpan.setBounds(400, 20, 150, 30);
-        btnExportPDF.setBounds(400, 60, 150, 30);
-        btnImporCSV.setBounds(400, 100, 150, 30);
-        btnTambahMapel.setBounds(400, 140, 150, 30);
-        btnExportCSV.setBounds(400, 180, 150, 30); // ✅ Tambahan posisi
-        btnDownloadTemplate.setBounds(400, 220, 150, 30); // ✅ Tambahan posisi
-
-        // Tambahkan semua komponen
-        add(l1); add(comboKelas);
-        add(l2); add(comboMapel);
-        add(l3); add(comboGuru);
-        add(l4); add(comboHari);
-        add(l5); add(fieldJamKe);
-        add(lblFilterKelas); add(cbFilterKelas);
-        add(lblFilterGuru); add(cbFilterGuru);
-        add(btnSimpan);
-        add(btnExportPDF);
-        add(btnImporCSV);
-        add(btnTambahMapel);
-        add(btnExportCSV); // ✅ Tambahkan ke frame
-        add(btnDownloadTemplate); // ✅ Tambahkan ke frame
-
-        // Tabel
-        modelTabel = new DefaultTableModel(new String[]{"Hari", "Jam Ke", "Kelas", "Mapel", "Guru"}, 0);
+        // Inisialisasi tabel
+        modelTabel = new DefaultTableModel(new String[]{"Hari", "Jam Ke", "Kelas", "Mapel", "Guru"}, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false; // Make table read-only
+            }
+        };
         tableJadwal = new JTable(modelTabel);
+        tableJadwal.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        tableJadwal.getTableHeader().setReorderingAllowed(false);
+        
+        // Set column widths
+        tableJadwal.getColumnModel().getColumn(0).setPreferredWidth(100); // Hari
+        tableJadwal.getColumnModel().getColumn(1).setPreferredWidth(80);  // Jam Ke
+        tableJadwal.getColumnModel().getColumn(2).setPreferredWidth(100); // Kelas
+        tableJadwal.getColumnModel().getColumn(3).setPreferredWidth(150); // Mapel
+        tableJadwal.getColumnModel().getColumn(4).setPreferredWidth(150); // Guru
+    }
+    
+    private void setupLayout() {
+        setLayout(new BorderLayout());
+        
+        // Create main panel with padding
+        JPanel mainPanel = new JPanel(new BorderLayout());
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        
+        // Create filter panel
+        JPanel filterPanel = createFilterPanel();
+        
+        // Create form panel
+        JPanel formPanel = createFormPanel();
+        
+        // Create action buttons panel
+        JPanel actionPanel = createActionPanel();
+        
+        // Create table panel
+        JPanel tablePanel = createTablePanel();
+        
+        // Combine form and action panels
+        JPanel formAndAction = new JPanel(new BorderLayout());
+        formAndAction.add(formPanel, BorderLayout.CENTER);
+        formAndAction.add(actionPanel, BorderLayout.EAST);
+        
+        // Combine filter with table panel
+        JPanel tableWithFilter = new JPanel(new BorderLayout());
+        tableWithFilter.add(filterPanel, BorderLayout.NORTH);
+        tableWithFilter.add(tablePanel, BorderLayout.CENTER);
+        
+        mainPanel.add(formAndAction, BorderLayout.NORTH);
+        mainPanel.add(tableWithFilter, BorderLayout.CENTER);
+        
+        add(mainPanel);
+    }
+    
+    private JPanel createFilterPanel() {
+        JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        filterPanel.setBorder(BorderFactory.createTitledBorder("Filter Data"));
+        
+        filterPanel.add(new JLabel("Filter Kelas:"));
+        filterPanel.add(cbFilterKelas);
+        
+        filterPanel.add(Box.createHorizontalStrut(20));
+        
+        filterPanel.add(new JLabel("Filter Guru:"));
+        filterPanel.add(cbFilterGuru);
+        
+        return filterPanel;
+    }
+    
+    private JPanel createFormPanel() {
+        JPanel formPanel = new JPanel(new GridBagLayout());
+        formPanel.setBorder(BorderFactory.createTitledBorder("Form Input Jadwal"));
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(5, 5, 5, 5);
+        
+        // Row 1: Kelas
+        gbc.gridx = 0; gbc.gridy = 0; gbc.anchor = GridBagConstraints.WEST;
+        formPanel.add(new JLabel("Kelas:"), gbc);
+        
+        gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL; gbc.weightx = 1.0;
+        formPanel.add(comboKelas, gbc);
+        
+        // Row 2: Mapel
+        gbc.gridx = 0; gbc.gridy = 1; gbc.anchor = GridBagConstraints.WEST; gbc.fill = GridBagConstraints.NONE; gbc.weightx = 0;
+        formPanel.add(new JLabel("Mapel:"), gbc);
+        
+        gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL; gbc.weightx = 1.0;
+        formPanel.add(comboMapel, gbc);
+        
+        // Row 3: Guru
+        gbc.gridx = 0; gbc.gridy = 2; gbc.anchor = GridBagConstraints.WEST; gbc.fill = GridBagConstraints.NONE; gbc.weightx = 0;
+        formPanel.add(new JLabel("Guru:"), gbc);
+        
+        gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL; gbc.weightx = 1.0;
+        formPanel.add(comboGuru, gbc);
+        
+        // Row 4: Hari
+        gbc.gridx = 0; gbc.gridy = 3; gbc.anchor = GridBagConstraints.WEST; gbc.fill = GridBagConstraints.NONE; gbc.weightx = 0;
+        formPanel.add(new JLabel("Hari:"), gbc);
+        
+        gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL; gbc.weightx = 1.0;
+        formPanel.add(comboHari, gbc);
+        
+        // Row 5: Jam Ke
+        gbc.gridx = 0; gbc.gridy = 4; gbc.anchor = GridBagConstraints.WEST; gbc.fill = GridBagConstraints.NONE; gbc.weightx = 0;
+        formPanel.add(new JLabel("Jam Ke:"), gbc);
+        
+        gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL; gbc.weightx = 1.0;
+        formPanel.add(fieldJamKe, gbc);
+        
+        return formPanel;
+    }
+    
+    private JPanel createActionPanel() {
+        JPanel actionPanel = new JPanel(new GridBagLayout());
+        actionPanel.setBorder(BorderFactory.createTitledBorder("Aksi"));
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(5, 5, 5, 5);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        
+        // Set preferred size untuk tombol agar konsisten
+        Dimension buttonSize = new Dimension(150, 30);
+        btnSimpan.setPreferredSize(buttonSize);
+        btnExportPDF.setPreferredSize(buttonSize);
+        btnImporCSV.setPreferredSize(buttonSize);
+        btnTambahMapel.setPreferredSize(buttonSize);
+        btnExportCSV.setPreferredSize(buttonSize);
+        btnDownloadTemplate.setPreferredSize(buttonSize);
+        
+        // Add buttons vertically
+        gbc.gridx = 0; gbc.gridy = 0;
+        actionPanel.add(btnSimpan, gbc);
+        
+        gbc.gridy = 1;
+        actionPanel.add(btnExportPDF, gbc);
+        
+        gbc.gridy = 2;
+        actionPanel.add(btnImporCSV, gbc);
+        
+        gbc.gridy = 3;
+        actionPanel.add(btnTambahMapel, gbc);
+        
+        gbc.gridy = 4;
+        actionPanel.add(btnExportCSV, gbc);
+        
+        gbc.gridy = 5;
+        actionPanel.add(btnDownloadTemplate, gbc);
+        
+        return actionPanel;
+    }
+    
+    private JPanel createTablePanel() {
+        JPanel tablePanel = new JPanel(new BorderLayout());
+        tablePanel.setBorder(BorderFactory.createTitledBorder("Data Jadwal Pelajaran"));
+        
         JScrollPane scrollPane = new JScrollPane(tableJadwal);
-        scrollPane.setBounds(30, 250, 620, 280);
-        add(scrollPane);
+        scrollPane.setPreferredSize(new Dimension(0, 300));
+        
+        tablePanel.add(scrollPane, BorderLayout.CENTER);
+        
+        return tablePanel;
     }
 
-    // Aksi
+    // Aksi - Method setter untuk action listeners
     public void setSimpanAction(ActionListener action) {
         btnSimpan.addActionListener(action);
     }
@@ -119,7 +237,6 @@ public class JadwalView extends JFrame {
         btnTambahMapel.addActionListener(al);
     }
 
-    // ✅ Tambahan method setter untuk tombol baru
     public void setExportCSVAction(ActionListener al) {
         btnExportCSV.addActionListener(al);
     }
@@ -128,7 +245,7 @@ public class JadwalView extends JFrame {
         btnDownloadTemplate.addActionListener(al);
     }
 
-    // Getter
+    // Getter methods
     public JComboBox<String> getCbKelas() {
         return comboKelas;
     }
