@@ -1,8 +1,5 @@
 package peminjaman;
 
-import buku.BukuController;
-import buku.BukuModel;
-import buku.BukuView;
 import java.io.File;
 import java.sql.Date;
 import java.util.ArrayList;
@@ -18,12 +15,18 @@ public class PeminjamanController {
     
     private final PeminjamanModel model;
     private final PeminjamanView view;
+    private JFrame parentFrame;
 
-    public PeminjamanController(PeminjamanModel model, PeminjamanView view) {
+    public PeminjamanController(PeminjamanModel model, PeminjamanView view, JFrame parentFrame) {
         this.model = model;
         this.view = view;
+        this.parentFrame = parentFrame;
 
         initComponents();
+    }
+
+    public PeminjamanController(PeminjamanModel model, PeminjamanView view) {
+        this(model, view, (view instanceof JFrame ? (JFrame) view : null));
     }
     
     //inisialisasi komponen dan handler
@@ -31,7 +34,7 @@ public class PeminjamanController {
         isiComboSiswa();
         isiComboBuku();
 
-        //listener supaya saat ada perubahan langsung update tabel
+        //listener saat ada perubahan langsung update tabel
         view.setSimpanAction(e -> simpanPeminjaman());
         view.setKembalikanAction(e -> prosesPengembalian());
         view.setMuatRiwayatAction(e -> tampilkanRiwayat());
@@ -255,28 +258,39 @@ public class PeminjamanController {
                 JOptionPane.YES_NO_OPTION);
                 
         if (confirm == JOptionPane.YES_OPTION) {
-            // Simpan referensi ke JFrame
-            JFrame currentFrame = view;
-            
-            // Tutup panel konten saat ini
-            currentFrame.getContentPane().removeAll();
-            
-            // Buat dan inisialisasi modul buku
-            BukuModel bukuModel = new BukuModel();
-            BukuView bukuView = new BukuView();
-            
-            // Ganti JFrame dengan panel konten dari bukuView
-            currentFrame.setContentPane(bukuView.getContentPane());
-            
-            // Perbarui title
-            currentFrame.setTitle("Modul Manajemen Buku");
-            
-            // Set controller untuk buku
-            BukuController bukuController = new BukuController(bukuModel, bukuView, currentFrame);
-            
-            // Refresh panel
-            currentFrame.revalidate();
-            currentFrame.repaint();
+            // Jika parentFrame ada (artinya PeminjamanView ditampilkan dalam frame yang dikelola, misal oleh MainController)
+            if (this.parentFrame != null) {
+                this.parentFrame.getContentPane().removeAll(); // Hapus konten lama dari parentFrame
+
+                BukuModel bukuModel = new BukuModel();
+                BukuView bukuView = new BukuView(); // BukuView adalah JFrame, kita ambil kontennya
+
+                // Set content pane dari bukuView ke parentFrame
+                this.parentFrame.setContentPane(bukuView.getContentPane());
+                this.parentFrame.setTitle("Modul Manajemen Buku"); // Update judul parentFrame
+
+                // Inisialisasi BukuController dengan model, view, DAN parentFrame yang sama
+                new BukuController(bukuModel, bukuView, this.parentFrame);
+
+                this.parentFrame.revalidate();
+                this.parentFrame.repaint();
+            } else {
+                // Fallback: Jika PeminjamanView dijalankan sebagai JFrame utama sendiri (parentFrame null)
+                // Tutup PeminjamanView saat ini dan buka BukuView sebagai JFrame baru.
+                // Ini berguna jika PeminjamanView.java bisa di-run sendiri.
+                if (view instanceof JFrame) {
+                    ((JFrame) view).dispose(); // Tutup PeminjamanView
+                }
+
+                BukuModel bukuModel = new BukuModel();
+                BukuView bukuView = new BukuView(); // Ini akan menjadi JFrame baru
+                // Gunakan konstruktor BukuController yang tidak memerlukan parentFrame,
+                // atau jika BukuController juga dimodifikasi untuk selalu menerima parentFrame,
+                // maka bukuView (sebagai JFrame) bisa menjadi parentFrame-nya sendiri.
+                new BukuController(bukuModel, bukuView, bukuView); // bukuView menjadi parentFrame-nya sendiri
+                bukuView.setVisible(true);
+                LOGGER.info("parentFrame was null in PeminjamanController.bukaModulBuku(). Opened BukuView in its own new window.");
+            }
         }
     }
 

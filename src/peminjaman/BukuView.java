@@ -1,4 +1,4 @@
-package buku;
+package peminjaman;
 
 import java.awt.*;
 import java.awt.event.MouseAdapter;

@@ -1,16 +1,14 @@
-package buku;
+package peminjaman;
 
 import java.util.ArrayList;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
-import peminjaman.PeminjamanController;
-import peminjaman.PeminjamanModel;
-import peminjaman.PeminjamanView;
+
 
 public class BukuController {
     private final BukuModel model;
     private final BukuView view;
-    private JFrame parentFrame; // Referensi ke frame induk
+    private JFrame parentFrame; 
     
     // Constructor yang menerima referensi ke frame
     public BukuController(BukuModel model, BukuView view, JFrame parentFrame) {
@@ -25,9 +23,8 @@ public class BukuController {
         view.setBatalAction(e -> view.resetForm());
         view.setCariAction(e -> cariBuku());
         view.setRefreshAction(e -> refreshTabel());
-        view.setKembaliAction(e -> kembaliKeMenuUtama());
+        view.setKembaliAction(e -> kembaliKeModulPeminjaman());
         
-        // Load data awal
         refreshTabel();
     }
     
@@ -162,47 +159,42 @@ public class BukuController {
         view.tableBuku.setModel(tableModel);
     }
     
-    private void kembaliKeMenuUtama() {
-        // Implementasi untuk kembali ke modul peminjaman
+    private void kembaliKeModulPeminjaman() {
         int confirm = JOptionPane.showConfirmDialog(view, 
                 "Kembali ke modul peminjaman?", 
                 "Konfirmasi", 
                 JOptionPane.YES_NO_OPTION);
         
-        if (confirm == JOptionPane.YES_OPTION) {
-            if (parentFrame != null) {
-                // Kita menggunakan frame yang sama untuk navigasi
-                // Bersihkan konten saat ini
-                parentFrame.getContentPane().removeAll();
-                
-                // Buat dan inisialisasi modul peminjaman
+        if (this.parentFrame != null) {
+                this.parentFrame.getContentPane().removeAll(); // Hapus konten lama dari parentFrame
+
                 PeminjamanModel peminjamanModel = new PeminjamanModel();
-                PeminjamanView peminjamanView = new PeminjamanView();
-                
-                // Set panel konten peminjaman ke frame
-                parentFrame.setContentPane(peminjamanView.getContentPane());
-                
-                // Perbarui title
-                parentFrame.setTitle("Modul Peminjaman Buku");
-                
-                // Set controller untuk peminjaman
-                new PeminjamanController(peminjamanModel, peminjamanView);
-                
-                // Refresh panel
-                parentFrame.revalidate();
-                parentFrame.repaint();
+                PeminjamanView peminjamanView = new PeminjamanView(); // PeminjamanView adalah JFrame, kita ambil kontennya
+
+                // Set content pane dari peminjamanView ke parentFrame
+                this.parentFrame.setContentPane(peminjamanView.getContentPane());
+                this.parentFrame.setTitle("Modul Peminjaman Buku"); // Update judul parentFrame
+
+                // Inisialisasi PeminjamanController dengan model, view, DAN parentFrame yang sama
+                new PeminjamanController(peminjamanModel, peminjamanView, this.parentFrame);
+
+                this.parentFrame.revalidate();
+                this.parentFrame.repaint();
             } else {
-                // Jika parentFrame null, kita menggunakan cara lama (buat frame baru)
-                view.dispose();
-                SwingUtilities.invokeLater(() -> {
-                    PeminjamanModel peminjamanModel = new PeminjamanModel();
-                    PeminjamanView peminjamanView = new PeminjamanView();
-                    new PeminjamanController(peminjamanModel, peminjamanView);
-                    peminjamanView.setVisible(true);
-                });
+                // Fallback: Jika BukuView dijalankan sebagai JFrame utama sendiri (parentFrame null)
+                // Tutup BukuView saat ini dan buka PeminjamanView sebagai JFrame baru.
+                if (view instanceof JFrame) {
+                    ((JFrame) view).dispose(); // Tutup BukuView
+                }
+
+                PeminjamanModel peminjamanModel = new PeminjamanModel();
+                PeminjamanView peminjamanView = new PeminjamanView(); // Ini akan menjadi JFrame baru
+                // Gunakan konstruktor PeminjamanController yang menerima parentFrame-nya sendiri
+                new PeminjamanController(peminjamanModel, peminjamanView, peminjamanView);
+                peminjamanView.setVisible(true);
+                // Consider adding logging here if necessary
             }
         }
-    }
     
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {

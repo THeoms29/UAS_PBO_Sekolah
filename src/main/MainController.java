@@ -11,6 +11,9 @@ import login.LoginView;
 import peminjaman.PeminjamanController;
 import peminjaman.PeminjamanModel;
 import peminjaman.PeminjamanView;
+import absensi.*;
+import inventaris.*;
+import jadwal.*;
 
 public class MainController {
     private static final Logger LOGGER = Logger.getLogger(MainController.class.getName());
@@ -112,7 +115,42 @@ public class MainController {
     }
 
     private void openAbsensiModule() {
-        showModuleNotImplemented("Absensi Siswa");
+        try {
+            // Validasi role user untuk akses modul absensi
+            if (!hasPermissionForModule("absensi")) {
+                JOptionPane.showMessageDialog(mainMenuView,
+                    "Anda tidak memiliki akses ke modul Absensi Siswa",
+                    "Akses Ditolak", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            // Buat window baru untuk modul absensi
+            JFrame absensiFrame = new JFrame("Modul Absensi Siswa");
+            absensiFrame.setSize(900, 600);
+            absensiFrame.setLocationRelativeTo(mainMenuView);
+            absensiFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+
+            // Inisialisasi komponen absensi
+            AbsensiModel absensiModel = new AbsensiModel();
+            AbsensiView absensiView = new AbsensiView();
+            
+            // Set content pane
+            absensiFrame.setContentPane(absensiView.getContentPane());
+            
+            // Inisialisasi controller
+            AbsensiController absensiController = new AbsensiController(absensiModel, absensiView);
+            
+            // Tampilkan window
+            absensiFrame.setVisible(true);
+            
+            LOGGER.info("Modul Absensi Siswa dibuka oleh user: " + currentUser.getNama());
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Gagal membuka modul absensi siswa", e);
+            JOptionPane.showMessageDialog(mainMenuView,
+                "Gagal membuka modul Absensi Siswa: " + e.getMessage(),
+                "Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private void openNilaiSiswaModule() {
@@ -120,12 +158,37 @@ public class MainController {
     }
 
     private void openJadwalPelajaranModule() {
-        showModuleNotImplemented("Jadwal Pelajaran");
+        try {
+            if (!hasPermissionForModule("jadwal")) {
+                JOptionPane.showMessageDialog(mainMenuView,
+                    "Anda tidak memiliki akses ke modul Jadwal Pelajaran.",
+                    "Akses Ditolak", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            // Inisialisasi komponen Jadwal
+            // JadwalView sudah merupakan JFrame, jadi tidak perlu membuat JFrame baru.
+            JadwalModel jadwalModel = new JadwalModel();
+            JadwalView jadwalView = new JadwalView(); // JadwalView adalah JFrame
+            new JadwalController(jadwalView, jadwalModel); // Kirim view dulu baru model sesuai konstruktor JadwalController
+
+            // Atur properti frame JadwalView
+            jadwalView.setLocationRelativeTo(mainMenuView);
+            // jadwalView.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE); // Ini sudah di set di constructor JadwalView
+            jadwalView.setVisible(true);
+
+            LOGGER.info("Modul Jadwal Pelajaran dibuka oleh user: " + currentUser.getNama());
+
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Gagal membuka modul Jadwal Pelajaran", e);
+            JOptionPane.showMessageDialog(mainMenuView,
+                "Gagal membuka modul Jadwal Pelajaran: " + e.getMessage(),
+                "Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private void openPeminjamanBukuModule() {
         try {
-            // Validasi role user untuk akses modul peminjaman
             if (!hasPermissionForModule("peminjaman")) {
                 JOptionPane.showMessageDialog(mainMenuView,
                     "Anda tidak memiliki akses ke modul Peminjaman Buku",
@@ -133,27 +196,24 @@ public class MainController {
                 return;
             }
 
-            // Buat window baru untuk modul peminjaman
-            JFrame peminjamanFrame = new JFrame("Modul Peminjaman Buku");
+            JFrame peminjamanFrame = new JFrame("Modul Peminjaman Buku"); // Ini adalah parentFrame
             peminjamanFrame.setSize(800, 600);
             peminjamanFrame.setLocationRelativeTo(mainMenuView);
             peminjamanFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
-            // Inisialisasi komponen peminjaman
             PeminjamanModel peminjamanModel = new PeminjamanModel();
-            PeminjamanView peminjamanView = new PeminjamanView();
-            
-            // Set content pane
+            PeminjamanView peminjamanView = new PeminjamanView(); // PeminjamanView adalah JFrame
+
+            // Set content pane dari peminjamanView ke peminjamanFrame
             peminjamanFrame.setContentPane(peminjamanView.getContentPane());
-            
-            // Inisialisasi controller
-            PeminjamanController peminjamanController = new PeminjamanController(peminjamanModel, peminjamanView);
-            
-            // Tampilkan window
+
+            // Inisialisasi PeminjamanController dan teruskan peminjamanFrame
+            new PeminjamanController(peminjamanModel, peminjamanView, peminjamanFrame); 
+
             peminjamanFrame.setVisible(true);
-            
+
             LOGGER.info("Modul Peminjaman Buku dibuka oleh user: " + currentUser.getNama());
-            
+
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Gagal membuka modul peminjaman buku", e);
             JOptionPane.showMessageDialog(mainMenuView,
@@ -163,7 +223,46 @@ public class MainController {
     }
 
     private void openInventarisModule() {
-        showModuleNotImplemented("Inventaris");
+        try {
+            // Validasi role user untuk akses modul inventaris
+            if (!hasPermissionForModule("inventaris")) {
+                JOptionPane.showMessageDialog(mainMenuView,
+                    "Anda tidak memiliki akses ke modul Inventaris",
+                    "Akses Ditolak", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            // Buat window baru untuk modul inventaris
+            JFrame inventarisFrame = new JFrame("Modul Inventaris Sekolah");
+            inventarisFrame.setSize(1000, 700);
+            inventarisFrame.setLocationRelativeTo(mainMenuView);
+            inventarisFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+            inventarisFrame.setMinimumSize(new java.awt.Dimension(800, 600));
+
+            // Inisialisasi komponen inventaris
+            InventarisModel inventarisModel = new InventarisModel();
+            InventarisView inventarisView = new InventarisView();
+            
+            // Set agar tidak auto exit saat ditutup dari main
+            inventarisView.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+            
+            // Set content pane
+            inventarisFrame.setContentPane(inventarisView.getContentPane());
+            
+            // Inisialisasi controller
+            InventarisController inventarisController = new InventarisController(inventarisModel, inventarisView);
+            
+            // Tampilkan window
+            inventarisFrame.setVisible(true);
+            
+            LOGGER.info("Modul Inventaris dibuka oleh user: " + currentUser.getNama() + " dengan role: " + currentUser.getRole());
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Gagal membuka modul inventaris", e);
+            JOptionPane.showMessageDialog(mainMenuView,
+                "Gagal membuka modul Inventaris: " + e.getMessage(),
+                "Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private void showModuleNotImplemented(String moduleName) {

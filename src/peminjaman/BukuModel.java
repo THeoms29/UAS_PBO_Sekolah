@@ -1,4 +1,4 @@
-package buku;
+package peminjaman;
 
 import java.sql.*;
 import java.util.ArrayList;
