@@ -4,7 +4,7 @@ import java.awt.*;
 import java.awt.event.ActionListener;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableColumn;
+import javax.swing.table.TableColumn; 
 
 public class AbsensiView extends JFrame {
     public JComboBox<String> comboKelas;
