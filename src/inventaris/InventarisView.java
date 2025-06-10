@@ -24,14 +24,72 @@ public class InventarisView extends JFrame {
     public JComboBox<Integer> cbTahun = new JComboBox<>();
     public JButton btnFilter = new JButton("Filter");
     public JButton btnResetFilter = new JButton("Reset");
-
+    
     public InventarisView() {
         setTitle("Modul Inventaris Sekolah");
         setSize(800, 600);
         setMinimumSize(new Dimension(600, 400));
         setLocationRelativeTo(null);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
-        
+        JPanel panelBackground = new JPanel() {
+            private Image bg;
+            
+            {
+                try {
+                    bg = new ImageIcon(getClass().getResource("/shared/Asset/BG1.jpeg")).getImage();
+                } catch (Exception e) {
+                    System.out.println("Gambar background tidak ditemukan: " + e.getMessage());
+                    bg = null;
+                }
+            }
+            
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                if (bg != null) {
+                    // Gambar background yang menyesuaikan ukuran panel
+                    g.drawImage(bg, 0, 0, getWidth(), getHeight(), this);
+                }
+            }
+        };
+        panelBackground.setLayout(new BorderLayout());
+        setContentPane(panelBackground);
+
+        btnSimpan.setBackground(new Color(70, 130, 180));
+        btnSimpan.setForeground(Color.WHITE);
+        btnSimpan.setOpaque(true);
+        btnSimpan.setBorderPainted(false);
+
+        btnEdit.setBackground(new Color(70, 130, 180));
+        btnEdit.setForeground(Color.WHITE);
+        btnEdit.setOpaque(true);
+        btnEdit.setBorderPainted(false);
+
+        btnHapus.setBackground(new Color(220, 20, 60));
+        btnHapus.setForeground(Color.WHITE);
+        btnHapus.setOpaque(true);
+        btnHapus.setBorderPainted(false);
+
+        btnExportCSV.setBackground(new Color(34, 139, 34));
+        btnExportCSV.setForeground(Color.WHITE);
+        btnExportCSV.setOpaque(true);
+        btnExportCSV.setBorderPainted(false);
+
+        btnExportPDF.setBackground(new Color(34, 139, 34));
+        btnExportPDF.setForeground(Color.WHITE);
+        btnExportPDF.setOpaque(true);
+        btnExportPDF.setBorderPainted(false);
+
+        btnFilter.setBackground(new Color(70, 130, 180));
+        btnFilter.setForeground(Color.WHITE);
+        btnFilter.setOpaque(true);
+        btnFilter.setBorderPainted(false);
+
+        btnResetFilter.setBackground(new Color(220, 20, 60));
+        btnResetFilter.setForeground(Color.WHITE);
+        btnResetFilter.setOpaque(true);
+        btnResetFilter.setBorderPainted(false);
+
         initializeComponents();
         setupLayout();
     }
@@ -69,6 +127,8 @@ public class InventarisView extends JFrame {
         // Create main panel with padding
         JPanel mainPanel = new JPanel(new BorderLayout());
         mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        mainPanel.setBackground(new Color(255, 255, 255, 200)); // Semi-transparent white background
+        mainPanel.setOpaque(false); // Make main panel transparent
         
         // Create filter panel - TAMBAHAN BARU
         JPanel filterPanel = createFilterPanel();
@@ -150,6 +210,8 @@ public class InventarisView extends JFrame {
         
         JScrollPane scrollPane = new JScrollPane(table);
         scrollPane.setPreferredSize(new Dimension(0, 300));
+        scrollPane.setOpaque(false);
+        scrollPane.getViewport().setOpaque(false);
         
         tablePanel.add(scrollPane, BorderLayout.CENTER);
         

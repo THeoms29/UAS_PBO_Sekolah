@@ -61,6 +61,7 @@ public class PeminjamanView extends JFrame {
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         initComponents();
+
     }
 
     private void initComponents() {
@@ -70,28 +71,61 @@ public class PeminjamanView extends JFrame {
         
         //inisialisasi panel utama dengan BorderLayout
         JPanel mainPanel = new JPanel(new BorderLayout());
+        mainPanel.setOpaque(false); // Set panel utama tidak opaque agar transparan
         
         //panel navigasi
         mainPanel.add(createNavigationPanel(), BorderLayout.NORTH);
         
         //panel utama (form + tabel)
         JPanel centerPanel = new JPanel(new BorderLayout());
+        centerPanel.setOpaque(false); // Set panel tengah tidak opaque agar transparan
         centerPanel.add(createFormPanel(), BorderLayout.NORTH);
         centerPanel.add(createTablePanel(), BorderLayout.CENTER);
         mainPanel.add(centerPanel, BorderLayout.CENTER);
+        // Set panel utama opaque agar background transparan
         
         //status label
         statusLabel = new JLabel(" ");
+        statusLabel.setOpaque(false); // Set label status tidak opaque agar transparan
+        statusLabel.setForeground(new Color(10, 255,255));
         statusLabel.setHorizontalAlignment(SwingConstants.CENTER);
         mainPanel.add(statusLabel, BorderLayout.SOUTH);
-        
-        //panel utama ke frame
-        add(mainPanel);
-    }
+
+        // === PANEL LATAR DENGAN GAMBAR ===
+        JPanel panelBackground = new JPanel() {
+        private Image bg;
+
+        {
+            try {
+                bg = new ImageIcon(getClass().getResource("/shared/Asset/BG1.jpeg")).getImage();
+            } catch (Exception e) {
+                System.out.println("Gambar background tidak ditemukan: " + e.getMessage());
+                bg = null;
+            }
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            if (bg != null) {
+                g.drawImage(bg, 0, 0, getWidth(), getHeight(), this);
+                }
+            }
+        };
+            panelBackground.setLayout(new BorderLayout());
+
+            
+            //panel utama ke frame
+            add(mainPanel);
+
+            panelBackground.add(mainPanel, BorderLayout.CENTER);
+            setContentPane(panelBackground);
+        }
     
     //Membuat panel navigasi
     private JPanel createNavigationPanel() {
         JPanel navPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        navPanel.setOpaque(false); // Set panel navigasi tidak opaque agar transparan
         btnKeBuku = new JButton("Ke Manajemen Buku");
         navPanel.add(btnKeBuku);
         return navPanel;
@@ -105,6 +139,12 @@ public class PeminjamanView extends JFrame {
         //Inisialisasi komponen pencarian siswa
         searchField = new JTextField();
         btnCariSiswa = new JButton("Cari");
+
+        btnCariSiswa.setBackground(new Color(70, 130, 180)); // Warna biru
+        btnCariSiswa.setForeground(Color.WHITE);
+        btnCariSiswa.setOpaque(true);
+        btnCariSiswa.setBorderPainted(false);
+
         JPanel panelCari = new JPanel(new BorderLayout(5, 0));
         panelCari.add(searchField, BorderLayout.CENTER);
         panelCari.add(btnCariSiswa, BorderLayout.EAST);
@@ -123,6 +163,21 @@ public class PeminjamanView extends JFrame {
         btnSimpan = new JButton("Simpan Peminjaman");
         btnKembalikan = new JButton("Proses Pengembalian");
         btnLihatRiwayat = new JButton("Lihat Riwayat");
+
+        btnSimpan.setBackground(new Color(70, 130, 180)); // Warna biru
+        btnSimpan.setForeground(Color.WHITE);
+        btnSimpan.setOpaque(true);
+        btnSimpan.setBorderPainted(false);
+
+        btnKembalikan.setBackground(new Color(34, 139, 34)); // Warna hijau
+        btnKembalikan.setForeground(Color.WHITE);
+        btnKembalikan.setOpaque(true);
+        btnKembalikan.setBorderPainted(false);
+
+        btnKeBuku.setBackground(new Color(255, 69, 0)); // Warna merah
+        btnKeBuku.setForeground(Color.WHITE);
+        btnKeBuku.setOpaque(true);
+        btnKeBuku.setBorderPainted(false);
 
         //Tambahkan komponen ke panel form
         panelForm.add(new JLabel("Cari Siswa (Nama):"));
@@ -161,6 +216,11 @@ public class PeminjamanView extends JFrame {
         //Panel pencarian riwayat
         searchRiwayatField = new JTextField();
         btnCariRiwayat = new JButton("Cari Riwayat");
+        btnCariRiwayat.setBackground(new Color(70, 130, 180)); // Warna biru
+        btnCariRiwayat.setForeground(Color.WHITE);
+        btnCariRiwayat.setOpaque(true);
+        btnCariRiwayat.setBorderPainted(false);
+
         JPanel panelCariRiwayat = new JPanel(new BorderLayout(5, 0));
         panelCariRiwayat.add(searchRiwayatField, BorderLayout.CENTER);
         panelCariRiwayat.add(btnCariRiwayat, BorderLayout.EAST);
@@ -172,6 +232,12 @@ public class PeminjamanView extends JFrame {
         //Panel bagian bawah (ekspor dan tombol lihat riwayat)
         JPanel southPanel = new JPanel(new BorderLayout());
         southPanel.add(btnLihatRiwayat = new JButton("Lihat Riwayat"), BorderLayout.NORTH);
+
+        btnLihatRiwayat.setBackground(new Color(70, 130, 190)); // Warna biru
+        btnLihatRiwayat.setForeground(Color.WHITE);
+        btnLihatRiwayat.setOpaque(true);
+        btnLihatRiwayat.setBorderPainted(false);
+
         southPanel.add(createExportPanel(), BorderLayout.SOUTH);
         panelTabel.add(southPanel, BorderLayout.SOUTH);
         
@@ -202,6 +268,15 @@ public class PeminjamanView extends JFrame {
         btnExportCsv = new JButton("Export ke CSV");
         btnExportPdf = new JButton("Export ke PDF");
         
+        btnExportCsv.setBackground(new Color(70, 130, 180)); // Warna biru
+        btnExportCsv.setForeground(Color.WHITE);
+        btnExportCsv.setOpaque(true);
+        btnExportCsv.setBorderPainted(false);
+        btnExportPdf.setBackground(new Color(70, 130, 180)); // Warna biru
+        btnExportPdf.setForeground(Color.WHITE);
+        btnExportPdf.setOpaque(true);
+        btnExportPdf.setBorderPainted(false);
+
         panelEkspor.add(new JLabel("Bulan:"));
         panelEkspor.add(comboBulan);
         panelEkspor.add(new JLabel("Tahun:"));

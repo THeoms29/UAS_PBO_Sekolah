@@ -43,6 +43,36 @@ public class JadwalView extends JFrame {
         btnExportCSV = new JButton("Ekspor CSV");
         btnDownloadTemplate = new JButton("Download Template");
 
+        btnSimpan.setBackground(new Color(70, 130, 180)); // Set warna tombol Simpan
+        btnSimpan.setForeground(Color.WHITE); // Set teks tombol Simpan menjadi putih
+        btnSimpan.setOpaque(true); // Pastikan tombol Simpan memiliki latar belakang
+        btnSimpan.setBorderPainted(false); // Hapus border tombol Simpan
+
+        btnExportPDF.setBackground(new Color(70, 130, 180)); // Set warna tombol Ekspor PDF
+        btnExportPDF.setForeground(Color.WHITE); // Set teks tombol Ekspor PDF menjadi putih
+        btnExportPDF.setOpaque(true); // Pastikan tombol Ekspor PDF memiliki latar belakang
+        btnExportPDF.setBorderPainted(false); // Hapus border tombol Ekspor PDF
+
+        btnImporCSV.setBackground(new Color(70, 130, 180)); // Set warna tombol Impor CSV
+        btnImporCSV.setForeground(Color.WHITE); // Set teks tombol Impor CSV menjadi putih
+        btnImporCSV.setOpaque(true); // Pastikan tombol Impor CSV memiliki latar belakang
+        btnImporCSV.setBorderPainted(false); // Hapus border tombol Impor CSV
+
+        btnTambahMapel.setBackground(new Color(70, 130, 180)); // Set warna tombol Tambah Mapel
+        btnTambahMapel.setForeground(Color.WHITE); // Set teks tombol Tambah Mapel menjadi putih
+        btnTambahMapel.setOpaque(true); // Pastikan tombol Tambah Mapel memiliki latar belakang
+        btnTambahMapel.setBorderPainted(false); // Hapus border tombol Tambah Mapel
+
+        btnExportCSV.setBackground(new Color(70, 130, 180)); // Set warna tombol Ekspor CSV
+        btnExportCSV.setForeground(Color.WHITE); // Set teks tombol Ekspor CSV menjadi putih
+        btnExportCSV.setOpaque(true); // Pastikan tombol Ekspor CSV memiliki latar belakang
+        btnExportCSV.setBorderPainted(false); // Hapus border tombol Ekspor CSV
+
+        btnDownloadTemplate.setBackground(new Color(20, 205, 200)); // Set warna tombol Download Template
+        btnDownloadTemplate.setForeground(Color.WHITE); // Set teks tombol Download Template menjadi putih
+        btnDownloadTemplate.setOpaque(true); // Pastikan tombol Download Template memiliki latar belakang
+        btnDownloadTemplate.setBorderPainted(false); // Hapus border tombol Download Template
+
         // Set preferred sizes untuk konsistensi
         Dimension comboSize = new Dimension(200, 25);
         comboKelas.setPreferredSize(comboSize);
@@ -78,6 +108,7 @@ public class JadwalView extends JFrame {
         // Create main panel with padding
         JPanel mainPanel = new JPanel(new BorderLayout());
         mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        mainPanel.setOpaque(false);
         
         // Create filter panel
         JPanel filterPanel = createFilterPanel();
@@ -93,19 +124,49 @@ public class JadwalView extends JFrame {
         
         // Combine form and action panels
         JPanel formAndAction = new JPanel(new BorderLayout());
+        formAndAction.setOpaque(false);
         formAndAction.add(formPanel, BorderLayout.CENTER);
         formAndAction.add(actionPanel, BorderLayout.EAST);
         
         // Combine filter with table panel
         JPanel tableWithFilter = new JPanel(new BorderLayout());
+        tableWithFilter.setOpaque(false);
         tableWithFilter.add(filterPanel, BorderLayout.NORTH);
         tableWithFilter.add(tablePanel, BorderLayout.CENTER);
         
         mainPanel.add(formAndAction, BorderLayout.NORTH);
         mainPanel.add(tableWithFilter, BorderLayout.CENTER);
-        
-        add(mainPanel);
-    }
+
+        // === PANEL LATAR DENGAN GAMBAR ===
+        JPanel panelBackground = new JPanel() {
+        private Image bg;
+
+        {
+            try {
+                bg = new ImageIcon(getClass().getResource("/shared/Asset/BG1.jpeg")).getImage();
+            } catch (Exception e) {
+                System.out.println("Gambar background tidak ditemukan: " + e.getMessage());
+                bg = null;
+            }
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            if (bg != null) {
+                g.drawImage(bg, 0, 0, getWidth(), getHeight(), this);
+                }
+            }
+        };
+            panelBackground.setLayout(new BorderLayout());
+
+            
+            //panel utama ke frame
+            add(mainPanel);
+
+            panelBackground.add(mainPanel, BorderLayout.CENTER);
+            setContentPane(panelBackground);
+        }
     
     private JPanel createFilterPanel() {
         JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));

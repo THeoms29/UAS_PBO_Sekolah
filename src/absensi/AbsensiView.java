@@ -20,8 +20,7 @@ public class AbsensiView extends JFrame {
     public JButton btnLihatRekap; 
     public JTable tableRekap;
     public DefaultTableModel modelRekap;
-    public JButton btnExport;
-    public JButton btnExportPDF;
+    public JButton btnKeWaliKelas;
 
     public DefaultTableModel tableModel;
 
@@ -30,15 +29,53 @@ public class AbsensiView extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(900, 500);
         setLocationRelativeTo(null);
+        JPanel panelBackground = new JPanel() {
+            private Image bg;
+            
+            {
+                try {
+                    bg = new ImageIcon(getClass().getResource("/shared/Asset/BG1.jpeg")).getImage();
+                } catch (Exception e) {
+                    System.out.println("Gambar background tidak ditemukan: " + e.getMessage());
+                    bg = null;
+                }
+            }
+            
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                if (bg != null) {
+                    // Gambar background yang menyesuaikan ukuran panel
+                    g.drawImage(bg, 0, 0, getWidth(), getHeight(), this);
+                }
+            }
+        };
+        panelBackground.setLayout(new BorderLayout());
+        setContentPane(panelBackground);
 
         comboKelas = new JComboBox<>();
         btnMuat = new JButton("Muat Siswa");
         btnSimpan = new JButton("Simpan Absensi");
         statusLabel = new JLabel("");
 
+        btnMuat.setBackground(new Color(70, 130, 180));
+        btnMuat.setForeground(Color.WHITE);
+        btnMuat.setOpaque(true);
+        btnMuat.setBorderPainted(false);
+
+        btnSimpan.setBackground(new Color(70, 130, 180));
+        btnSimpan.setForeground(Color.WHITE);
+        btnSimpan.setOpaque(true);
+        btnSimpan.setBorderPainted(false);
+
         fieldNamaSiswa = new JTextField(10);
         fieldNis = new JTextField(10);
         btnTambahSiswa = new JButton("Tambah Siswa");
+
+        btnTambahSiswa.setBackground(new Color(70, 130, 180));
+        btnTambahSiswa.setForeground(Color.WHITE);
+        btnTambahSiswa.setOpaque(true);
+        btnTambahSiswa.setBorderPainted(false);
 
         String[] kolom = {"ID", "Nama", "NIS", "Status"};
         tableModel = new DefaultTableModel(null, kolom) {
@@ -49,7 +86,12 @@ public class AbsensiView extends JFrame {
         };
 
         tableSiswa = new JTable(tableModel);
+        tableSiswa.setOpaque(false);
+        ((DefaultTableModel) tableSiswa.getModel()).setRowCount(0);
+
         JScrollPane scrollPane = new JScrollPane(tableSiswa);
+        scrollPane.setOpaque(false);
+        scrollPane.getViewport().setOpaque(false);
 
         String[] statusOptions = {"Hadir", "Izin", "Sakit", "Alpha"};
         JComboBox<String> comboBoxStatus = new JComboBox<>(statusOptions);
@@ -76,8 +118,17 @@ public class AbsensiView extends JFrame {
         }
 
         btnLihatRekap = new JButton("Lihat Rekap");
-        btnExport = new JButton("Export ke Spreadsheet");
-        btnExportPDF = new JButton("Export ke PDF");
+        btnLihatRekap.setBackground(new Color(70, 130, 180));
+        btnLihatRekap.setForeground(Color.WHITE);
+        btnLihatRekap.setOpaque(true);
+        btnLihatRekap.setBorderPainted(false);
+
+        btnKeWaliKelas = new JButton("Ke Wali Kelas");
+        btnKeWaliKelas.setBackground(new Color(70, 130, 180));
+        btnKeWaliKelas.setForeground(Color.WHITE);
+        btnKeWaliKelas.setOpaque(true);
+        btnKeWaliKelas.setBorderPainted(false);
+        
 
         JPanel panelRekapTop = new JPanel();
         panelRekapTop.add(new JLabel("Bulan:"));
@@ -90,21 +141,26 @@ public class AbsensiView extends JFrame {
         topPanel.add(btnTambahSiswa);
         panelRekapTop.add(comboTahun);
         panelRekapTop.add(btnLihatRekap);
-        panelRekapTop.add(btnExport);
-        panelRekapTop.add(btnExportPDF);
+        panelRekapTop.add(btnKeWaliKelas);
 
         String[] kolomRekap = {"Nama", "NIS", "Hadir", "Izin", "Sakit", "Alpha"};
         modelRekap = new DefaultTableModel(kolomRekap, 0);
         tableRekap = new JTable(modelRekap);
+        tableRekap.setOpaque(false);
+        
         JScrollPane scrollRekap = new JScrollPane(tableRekap);
+        scrollRekap.setOpaque(false);
+        scrollRekap.getViewport().setOpaque(false);
 
         JPanel panelRekap = new JPanel(new BorderLayout());
+        panelRekap.setOpaque(false);
         panelRekap.add(panelRekapTop, BorderLayout.NORTH);
         panelRekap.add(scrollRekap, BorderLayout.CENTER);
 
         JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,
                 scrollPane, panelRekap);
         splitPane.setDividerLocation(450);
+        splitPane.setOpaque(false);
 
         add(topPanel, BorderLayout.NORTH);
         add(splitPane, BorderLayout.CENTER); // <--- Perbaikan di sini
@@ -127,12 +183,8 @@ public class AbsensiView extends JFrame {
         btnLihatRekap.addActionListener(al);
     }
 
-    public void setExportAction(ActionListener al) {
-    btnExport.addActionListener(al);
-    }
-
-    public void setExportPDFAction(ActionListener al) {
-    btnExportPDF.addActionListener(al);
+    public void setKeWaliKelasAction(ActionListener al) {
+        btnKeWaliKelas.addActionListener(al);
     }
 
     public void setStatusColumnAsDropdown() {

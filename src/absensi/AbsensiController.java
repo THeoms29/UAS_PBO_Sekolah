@@ -5,18 +5,7 @@ import java.util.ArrayList;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.io.*;
-
-import com.itextpdf.text.BaseColor;
-import com.itextpdf.text.Document;
-import com.itextpdf.text.DocumentException;
-import com.itextpdf.text.Element;
-import com.itextpdf.text.Font;
-import com.itextpdf.text.FontFactory;
-import com.itextpdf.text.Paragraph;
-import com.itextpdf.text.Phrase;
-import com.itextpdf.text.pdf.PdfPCell;
-import com.itextpdf.text.pdf.PdfPTable;
-import com.itextpdf.text.pdf.PdfWriter;
+import NilaiSiswa.*;
 
 public class AbsensiController {
     private AbsensiModel model;
@@ -31,25 +20,7 @@ public class AbsensiController {
         view.setMuatAction(e -> muatSiswa());
         view.setSimpanAction(e -> simpanAbsensi());
         view.setLihatRekapAction(e -> lihatRekapBulanan());
-
-        view.setExportAction(e -> {
-        String kelasDipilih = (String) view.comboKelas.getSelectedItem();
-        String bulanStr = (String) view.comboBulan.getSelectedItem();
-        String tahunStr = (String) view.comboTahun.getSelectedItem();
-
-        if (kelasDipilih == null || bulanStr == null || tahunStr == null) {
-            JOptionPane.showMessageDialog(view, "Pilih kelas, bulan dan tahun terlebih dahulu.");
-            return;
-        }
-
-        try {
-            int bulan = Integer.parseInt(bulanStr);
-            int tahun = Integer.parseInt(tahunStr);
-            exportRekapBulananKeCSV(kelasDipilih, bulan, tahun);
-        } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(view, "Bulan atau tahun tidak valid.");
-        }
-        });
+        view.setKeWaliKelasAction(e -> keWaliKelas());
 
         view.setTambahSiswaAction(e -> {
         String nama = view.fieldNamaSiswa.getText().trim();
@@ -69,25 +40,6 @@ public class AbsensiController {
             muatSiswa(); // Refresh daftar siswa
         } else {
             JOptionPane.showMessageDialog(view, "Gagal menambahkan siswa.");
-        }
-        });
-
-        view.setExportPDFAction(e -> {
-        String kelasDipilih = (String) view.comboKelas.getSelectedItem();
-        String bulanStr = (String) view.comboBulan.getSelectedItem();
-        String tahunStr = (String) view.comboTahun.getSelectedItem();
-
-        if (kelasDipilih == null || bulanStr == null || tahunStr == null) {
-        JOptionPane.showMessageDialog(view, "Pilih kelas, bulan dan tahun terlebih dahulu.");
-        return;
-        }
-
-        try {
-        int bulan = Integer.parseInt(bulanStr);
-        int tahun = Integer.parseInt(tahunStr);
-        exportRekapBulananKePDF(kelasDipilih, bulan, tahun);
-        } catch (NumberFormatException ex) {
-        JOptionPane.showMessageDialog(view, "Bulan atau tahun tidak valid.");
         }
         });
 
@@ -168,101 +120,17 @@ public class AbsensiController {
         }
     }
 
-    private void exportRekapBulananKeCSV(String namaKelas, int bulan, int tahun) {
-    ArrayList<String[]> data = model.getRekapBulanan(namaKelas, bulan, tahun);
-    System.out.println("Jumlah data yang didapat: " + data.size());
-
-    if (data.isEmpty()) {
-        JOptionPane.showMessageDialog(view, "Tidak ada data untuk diekspor.");
-        return;
-    }
-
-    String[] headers = {"Nama", "NIS", "Hadir", "Izin", "Sakit", "Alpha"};
-
-    try {
-        File folder = new File("ekspor_absensi");
-        if (!folder.exists()) {
-            folder.mkdirs();
-        }
-
-        String fileName = String.format("Rekap_Absensi_%s_%02d_%d.csv",
-                namaKelas.replaceAll(" ", "_"), bulan, tahun);
-        File file = new File(folder, fileName);
-
-        try (PrintWriter writer = new PrintWriter(new FileWriter(file))) {
-            // Tulis header
-            writer.println(String.join(",", headers));
-
-            // Tulis data baris per baris
-            for (String[] row : data) {
-                writer.println(String.join(",", row));
-            }
-        }
-
-        JOptionPane.showMessageDialog(view, "Data berhasil diekspor ke: " + file.getAbsolutePath());
-    } catch (IOException e) {
-        e.printStackTrace();
-        JOptionPane.showMessageDialog(view, "Gagal ekspor CSV: " + e.getMessage());
-    }
-    }
-
-    private void exportRekapBulananKePDF(String namaKelas, int bulan, int tahun) {
-        ArrayList<String[]> data = model.getRekapBulanan(namaKelas, bulan, tahun);
-        if (data.isEmpty()) {
-            JOptionPane.showMessageDialog(view, "Tidak ada data untuk diekspor.");
-            return;
-        }
-
-        String[] headers = {"Nama", "NIS", "Hadir", "Izin", "Sakit", "Alpha"};
-
-        try {
-            File folder = new File("ekspor_absensi");
-            if (!folder.exists()) {
-                folder.mkdirs();
-            }
-
-            String fileName = String.format("Rekap_Absensi_%s_%02d_%d.pdf",
-                    namaKelas.replaceAll(" ", "_"), bulan, tahun);
-            File file = new File(folder, fileName);
-
-            Document document = new Document();
-            PdfWriter.getInstance(document, new FileOutputStream(file));
-            document.open();
-
-            Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16);
-            Paragraph title = new Paragraph("Rekap Absensi Bulanan", titleFont);
-            title.setAlignment(Element.ALIGN_CENTER);
-            document.add(title);
-            document.add(new Paragraph(" ")); // spasi
-
-            PdfPTable table = new PdfPTable(headers.length);
-            table.setWidthPercentage(100);
-
-            // Tambahkan header
-            for (String h : headers) {
-                PdfPCell cell = new PdfPCell(new Phrase(h));
-                cell.setBackgroundColor(BaseColor.LIGHT_GRAY);
-                table.addCell(cell);
-            }
-
-            // Tambahkan isi data
-            for (String[] row : data) {
-                for (String value : row) {
-                    table.addCell(value);
-                }
-            }
-
-            document.add(table);
-            document.close();
-
-            JOptionPane.showMessageDialog(view,
-                "Data berhasil diekspor ke: " + file.getAbsolutePath());
-
+    private void keWaliKelas() {
+        try{
+            WaliKelasView waliKelasView = new WaliKelasView();
+            WaliKelasModel waliKelasModel = new WaliKelasModel();
+            WaliKelasController waliKelasController = new WaliKelasController(waliKelasView, waliKelasModel);
+            waliKelasView.setVisible(true);
+            view.dispose(); // Tutup view absensi
         } catch (Exception e) {
-            e.printStackTrace();
-            JOptionPane.showMessageDialog(view, "Gagal ekspor PDF: " + e.getMessage());
+            JOptionPane.showMessageDialog(view, "Gagal membuka Wali Kelas: " + e.getMessage());
         }
-        }
+    }
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
