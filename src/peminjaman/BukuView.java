@@ -40,10 +40,18 @@ public class BukuView extends JFrame {
         JPanel mainPanel = new JPanel();
         mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
         mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        mainPanel.setOpaque(false);
         
         // Panel navigasi
         JPanel navPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        navPanel.setOpaque(false);
         btnKembali = new JButton("Kembali ke Modul Peminjaman");
+
+        btnKembali.setBackground(new Color(70,130,180)); // Warna merah
+        btnKembali.setForeground(Color.WHITE);
+        btnKembali.setOpaque(true); // Menghilangkan border fokus
+        btnKembali.setFocusPainted(false); // Menghilangkan efek fokus
+
         navPanel.add(btnKembali);
         
         // Panel Form di dalam panel terpisah dengan ukuran tetap
@@ -69,10 +77,31 @@ public class BukuView extends JFrame {
         
         // Panel Tombol Form
         JPanel btnFormPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+
         btnSimpan = new JButton("Simpan");
         btnUpdate = new JButton("Update");
         btnHapus = new JButton("Hapus");
         btnBatal = new JButton("Batal");
+
+        btnSimpan.setBackground(new Color(70, 130, 180)); // Warna biru
+        btnSimpan.setForeground(Color.WHITE);
+        btnSimpan.setOpaque(true);
+        btnSimpan.setBorderPainted(false);
+        
+        btnUpdate.setBackground(new Color(34, 139, 34)); // Warna hijau
+        btnUpdate.setForeground(Color.WHITE);
+        btnUpdate.setOpaque(true);
+        btnUpdate.setBorderPainted(false);
+        
+        btnHapus.setBackground(new Color(220, 20, 60)); // Warna merah crimson
+        btnHapus.setForeground(Color.WHITE);
+        btnHapus.setOpaque(true);
+        btnHapus.setBorderPainted(false);
+        
+        btnBatal.setBackground(new Color(128, 128, 128)); // Warna abu-abu
+        btnBatal.setForeground(Color.WHITE);
+        btnBatal.setOpaque(true);
+        btnBatal.setBorderPainted(false);
         
         btnFormPanel.add(btnSimpan);
         btnFormPanel.add(btnUpdate);
@@ -87,9 +116,20 @@ public class BukuView extends JFrame {
         cariContainer.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
         
         JPanel cariPanel = new JPanel(new BorderLayout(5, 0));
+
         txtCari = new JTextField();
         btnCari = new JButton("Cari");
         btnRefresh = new JButton("Refresh");
+
+        btnCari.setBackground(new Color(70, 130, 180)); // Warna biru
+        btnCari.setForeground(Color.WHITE);
+        btnCari.setOpaque(true);
+        btnCari.setBorderPainted(false);
+        
+        btnRefresh.setBackground(new Color(70, 130, 180)); // Warna biru
+        btnRefresh.setForeground(Color.WHITE);
+        btnRefresh.setOpaque(true);
+        btnRefresh.setBorderPainted(false);
         
         cariPanel.add(new JLabel("Cari (Judul/Penulis): "), BorderLayout.WEST);
         cariPanel.add(txtCari, BorderLayout.CENTER);
@@ -144,6 +184,7 @@ public class BukuView extends JFrame {
         // Status bar
         statusLabel = new JLabel(" ");
         statusLabel.setBorder(BorderFactory.createLoweredBevelBorder());
+        statusLabel.setOpaque(true);
         
         // Menambahkan semua ke panel utama dengan urutan yang benar
         mainPanel.add(formContainer);
@@ -151,6 +192,32 @@ public class BukuView extends JFrame {
         mainPanel.add(cariContainer);
         mainPanel.add(Box.createRigidArea(new Dimension(0, 5))); // Spacing
         mainPanel.add(tableContainer);
+
+        // === PANEL LATAR DENGAN GAMBAR ===
+        JPanel panelBackground = new JPanel() {
+            private Image bg;
+
+            {
+                try {
+                    bg = new ImageIcon(getClass().getResource("/shared/Asset/BG1.jpeg")).getImage();
+                } catch (Exception e) {
+                    System.out.println("Gambar background tidak ditemukan: " + e.getMessage());
+                    bg = null;
+                }
+            }
+
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                if (bg != null) {
+                    g.drawImage(bg, 0, 0, getWidth(), getHeight(), this);
+                }
+            }
+        };
+        panelBackground.setLayout(new BorderLayout());
+
+        panelBackground.add(mainPanel, BorderLayout.CENTER);
+        setContentPane(panelBackground);
         
         // Layout utama
         setLayout(new BorderLayout());
