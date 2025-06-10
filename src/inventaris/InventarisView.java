@@ -3,7 +3,7 @@ package inventaris;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.util.List;
+import java.util.List; 
 
 public class InventarisView extends JFrame {
     public JTextField txtNama = new JTextField();
