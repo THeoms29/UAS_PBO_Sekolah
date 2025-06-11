@@ -1,12 +1,15 @@
 package main;
 
 import java.awt.Component;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.*;
 
 import login.LoginModel;
-import login.LoginModel.User;
 import login.LoginView;
 import peminjaman.PeminjamanController;
 import peminjaman.PeminjamanModel;
@@ -14,6 +17,14 @@ import peminjaman.PeminjamanView;
 import absensi.*;
 import inventaris.*;
 import jadwal.*;
+import NilaiSiswa.InputNilaiView;
+import NilaiSiswa.NilaiController;
+import NilaiSiswa.NilaiModel;
+import NilaiSiswa.WaliKelasController;
+import NilaiSiswa.WaliKelasModel;
+import NilaiSiswa.WaliKelasView;
+import login.LoginModel.User;
+import shared.Koneksi;
 
 public class MainController {
     private static final Logger LOGGER = Logger.getLogger(MainController.class.getName());
@@ -22,6 +33,10 @@ public class MainController {
     private LoginView loginView;
     private MainMenuView mainMenuView;
     private User currentUser;
+    private WaliKelasController waliKelasController;
+    private NilaiController nilaiController;
+    private String lastSelectedKelas;
+    private String lastSelectedSemester; // Added to track last selected semester
 
     public MainController() {
         initializeLogin();
@@ -57,14 +72,12 @@ public class MainController {
             return;
         }
 
-        // Validasi login
         User user = loginModel.validateLogin(username, password);
         
         if (user != null) {
             currentUser = user;
             loginView.setStatus("Login berhasil! Membuka menu utama...", false);
             
-            // Delay singkat untuk memberikan feedback visual
             Timer timer = new Timer(1000, e -> {
                 loginView.dispose();
                 openMainMenu();
@@ -116,7 +129,6 @@ public class MainController {
 
     private void openAbsensiModule() {
         try {
-            // Validasi role user untuk akses modul absensi
             if (!hasPermissionForModule("absensi")) {
                 JOptionPane.showMessageDialog(mainMenuView,
                     "Anda tidak memiliki akses ke modul Absensi Siswa",
@@ -124,23 +136,18 @@ public class MainController {
                 return;
             }
 
-            // Buat window baru untuk modul absensi
             JFrame absensiFrame = new JFrame("Modul Absensi Siswa");
             absensiFrame.setSize(900, 600);
             absensiFrame.setLocationRelativeTo(mainMenuView);
             absensiFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
-            // Inisialisasi komponen absensi
             AbsensiModel absensiModel = new AbsensiModel();
             AbsensiView absensiView = new AbsensiView();
             
-            // Set content pane
             absensiFrame.setContentPane(absensiView.getContentPane());
             
-            // Inisialisasi controller
-            AbsensiController absensiController = new AbsensiController(absensiModel, absensiView);
+            AbsensiController absensiController = new AbsensiController(absensiModel, absensiView, this);
             
-            // Tampilkan window
             absensiFrame.setVisible(true);
             
             LOGGER.info("Modul Absensi Siswa dibuka oleh user: " + currentUser.getNama());
@@ -153,8 +160,106 @@ public class MainController {
         }
     }
 
-    private void openNilaiSiswaModule() {
-        showModuleNotImplemented("Nilai Siswa");
+    public void openNilaiSiswaModule() {
+        if (currentUser == null || !currentUser.getRole().equals("guru")) {
+            JOptionPane.showMessageDialog(mainMenuView, "Hanya guru yang dapat mengakses fitur input nilai!", "Peringatan", JOptionPane.WARNING_MESSAGE);
+            LOGGER.warning("Akses input nilai ditolak: user=" + (currentUser != null ? currentUser.getRole() : "null"));
+            return;
+        }
+
+        SwingUtilities.invokeLater(() -> {
+            try {
+                int userId = currentUser.getId();
+                int mapelId = getMapelIdForGuru(userId);
+                if (mapelId == -1) {
+                    JOptionPane.showMessageDialog(mainMenuView, "Tidak ada mata pelajaran yang terkait dengan guru ini!", "Error", JOptionPane.ERROR_MESSAGE);
+                    LOGGER.severe("Tidak ada mapel_id untuk guru_id=" + userId);
+                    return;
+                }
+
+                InputNilaiView inputNilaiView = new InputNilaiView();
+                inputNilaiView.setMainController(this);
+                NilaiModel nilaiModel = new NilaiModel(Koneksi.getConnection());
+                nilaiController = new NilaiController(inputNilaiView, nilaiModel, this);
+                inputNilaiView.setController(nilaiController);
+                if (lastSelectedKelas != null) {
+                    nilaiController.setLastSelectedKelas(lastSelectedKelas);
+                }
+                if (lastSelectedSemester != null) {
+                    nilaiController.setLastSelectedSemester(lastSelectedSemester); // Pass semester
+                }
+                inputNilaiView.setVisible(true);
+                nilaiController.loadDataAwal();
+                LOGGER.info("Membuka modul Input Nilai untuk guru_id=" + userId + ", mapel_id=" + mapelId + ", kelas=" + lastSelectedKelas + ", semester=" + lastSelectedSemester);
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(mainMenuView, "Gagal membuka fitur Input Nilai: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                LOGGER.severe("Gagal membuka Input Nilai: " + e.getMessage());
+            }
+        });
+    }
+
+    public void openWaliKelasModule() {
+        if (currentUser == null || !currentUser.getRole().equals("guru")) {
+            JOptionPane.showMessageDialog(mainMenuView, "Hanya guru yang dapat mengakses fitur Wali Kelas!", "Peringatan", JOptionPane.WARNING_MESSAGE);
+            LOGGER.warning("Akses Wali Kelas ditolak: user=" + (currentUser != null ? currentUser.getRole() : "null"));
+            return;
+        }
+
+        SwingUtilities.invokeLater(() -> {
+            try {
+                if (nilaiController != null && nilaiController.getLastSelectedKelas() != null) {
+                    lastSelectedKelas = nilaiController.getLastSelectedKelas();
+                    lastSelectedSemester = nilaiController.getLastSelectedSemester(); // Update semester
+                    LOGGER.info("lastSelectedKelas dan lastSelectedSemester diperbarui dari NilaiController: " + lastSelectedKelas + ", " + lastSelectedSemester);
+                }
+                
+                WaliKelasView waliKelasView = new WaliKelasView();
+                WaliKelasModel waliKelasModel = new WaliKelasModel();
+                waliKelasController = new WaliKelasController(waliKelasView, waliKelasModel, this);
+                
+                if (waliKelasView == null || waliKelasModel == null || waliKelasController == null) {
+                    throw new RuntimeException("Gagal menginisialisasi komponen Wali Kelas: null reference detected");
+                }
+                
+                waliKelasView.setController(waliKelasController);
+                waliKelasView.setMainController(this);
+                
+                if (lastSelectedKelas != null) {
+                    waliKelasView.getComboKelas().setSelectedItem(lastSelectedKelas);
+                    if (lastSelectedSemester != null) {
+                        waliKelasView.getComboSemester().setSelectedItem("Semester " + lastSelectedSemester);
+                    }
+                    LOGGER.info("lastSelectedKelas dan lastSelectedSemester diterapkan ke WaliKelasView: " + lastSelectedKelas + ", " + lastSelectedSemester);
+                }
+                
+                waliKelasView.setVisible(true);
+                waliKelasController.loadDataAwal();
+                LOGGER.info("Modul Wali Kelas dibuka untuk user: " + currentUser.getNama());
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(mainMenuView, "Gagal membuka fitur Wali Kelas: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                LOGGER.severe("Gagal membuka Wali Kelas: " + e.getMessage());
+            }
+        });
+    }
+
+    public int getMapelIdForGuru(int guruId) {
+        Connection conn = Koneksi.getConnection();
+        if (conn == null) {
+            LOGGER.severe("Gagal mendapatkan koneksi database");
+            return -1;
+        }
+
+        String sql = "SELECT mapel_id FROM jadwal WHERE guru_id = ? LIMIT 1";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, guruId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt("mapel_id");
+            }
+        } catch (SQLException e) {
+            LOGGER.severe("Gagal mengambil mapel_id untuk guru_id=" + guruId + ": " + e.getMessage());
+        }
+        return -1;
     }
 
     private void openJadwalPelajaranModule() {
@@ -166,15 +271,11 @@ public class MainController {
                 return;
             }
 
-            // Inisialisasi komponen Jadwal
-            // JadwalView sudah merupakan JFrame, jadi tidak perlu membuat JFrame baru.
             JadwalModel jadwalModel = new JadwalModel();
-            JadwalView jadwalView = new JadwalView(); // JadwalView adalah JFrame
-            new JadwalController(jadwalView, jadwalModel); // Kirim view dulu baru model sesuai konstruktor JadwalController
+            JadwalView jadwalView = new JadwalView();
+            new JadwalController(jadwalView, jadwalModel);
 
-            // Atur properti frame JadwalView
             jadwalView.setLocationRelativeTo(mainMenuView);
-            // jadwalView.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE); // Ini sudah di set di constructor JadwalView
             jadwalView.setVisible(true);
 
             LOGGER.info("Modul Jadwal Pelajaran dibuka oleh user: " + currentUser.getNama());
@@ -196,19 +297,17 @@ public class MainController {
                 return;
             }
 
-            JFrame peminjamanFrame = new JFrame("Modul Peminjaman Buku"); // Ini adalah parentFrame
+            JFrame peminjamanFrame = new JFrame("Modul Peminjaman Buku");
             peminjamanFrame.setSize(800, 600);
             peminjamanFrame.setLocationRelativeTo(mainMenuView);
             peminjamanFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
             PeminjamanModel peminjamanModel = new PeminjamanModel();
-            PeminjamanView peminjamanView = new PeminjamanView(); // PeminjamanView adalah JFrame
+            PeminjamanView peminjamanView = new PeminjamanView();
 
-            // Set content pane dari peminjamanView ke peminjamanFrame
             peminjamanFrame.setContentPane(peminjamanView.getContentPane());
 
-            // Inisialisasi PeminjamanController dan teruskan peminjamanFrame
-            new PeminjamanController(peminjamanModel, peminjamanView, peminjamanFrame); 
+            new PeminjamanController(peminjamanModel, peminjamanView, peminjamanFrame);
 
             peminjamanFrame.setVisible(true);
 
@@ -224,7 +323,6 @@ public class MainController {
 
     private void openInventarisModule() {
         try {
-            // Validasi role user untuk akses modul inventaris
             if (!hasPermissionForModule("inventaris")) {
                 JOptionPane.showMessageDialog(mainMenuView,
                     "Anda tidak memiliki akses ke modul Inventaris",
@@ -232,27 +330,21 @@ public class MainController {
                 return;
             }
 
-            // Buat window baru untuk modul inventaris
             JFrame inventarisFrame = new JFrame("Modul Inventaris Sekolah");
             inventarisFrame.setSize(1000, 700);
             inventarisFrame.setLocationRelativeTo(mainMenuView);
             inventarisFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
             inventarisFrame.setMinimumSize(new java.awt.Dimension(800, 600));
 
-            // Inisialisasi komponen inventaris
             InventarisModel inventarisModel = new InventarisModel();
             InventarisView inventarisView = new InventarisView();
             
-            // Set agar tidak auto exit saat ditutup dari main
             inventarisView.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
             
-            // Set content pane
             inventarisFrame.setContentPane(inventarisView.getContentPane());
             
-            // Inisialisasi controller
             InventarisController inventarisController = new InventarisController(inventarisModel, inventarisView);
             
-            // Tampilkan window
             inventarisFrame.setVisible(true);
             
             LOGGER.info("Modul Inventaris dibuka oleh user: " + currentUser.getNama() + " dengan role: " + currentUser.getRole());
@@ -265,32 +357,22 @@ public class MainController {
         }
     }
 
-    private void showModuleNotImplemented(String moduleName) {
-        JOptionPane.showMessageDialog(mainMenuView,
-            "Modul " + moduleName + " belum diimplementasikan.\n" +
-            "Modul ini akan segera tersedia dalam versi mendatang.",
-            "Modul Belum Tersedia", JOptionPane.INFORMATION_MESSAGE);
-    }
-
     private boolean hasPermissionForModule(String module) {
-        // Implementasi sederhana permission berdasarkan role
+        if (currentUser == null) {
+            return false;
+        }
         String role = currentUser.getRole().toLowerCase();
         
         switch (module.toLowerCase()) {
             case "peminjaman":
-                // Semua role bisa akses peminjaman buku
                 return true;
             case "absensi":
-                // Hanya guru dan staff yang bisa akses absensi
                 return role.equals("guru") || role.equals("staff") || role.equals("kepala_sekolah");
             case "nilai":
-                // Hanya guru dan kepala sekolah yang bisa akses nilai
                 return role.equals("guru") || role.equals("kepala_sekolah");
             case "jadwal":
-                // Semua role bisa melihat jadwal
                 return true;
             case "inventaris":
-                // Hanya staff dan kepala sekolah yang bisa akses inventaris
                 return role.equals("staff") || role.equals("kepala_sekolah");
             default:
                 return false;
@@ -304,30 +386,64 @@ public class MainController {
                 JOptionPane.YES_NO_OPTION);
                 
         if (confirm == JOptionPane.YES_OPTION) {
-            LOGGER.info("User " + currentUser.getNama() + " melakukan logout");
+            LOGGER.info("User " + (currentUser != null ? currentUser.getNama() : "unknown") + " melakukan logout");
             
-            // Tutup main menu
+            if (waliKelasController != null) {
+                waliKelasController.shutdownScheduler();
+                waliKelasController = null;
+            }
+            if (nilaiController != null) {
+                nilaiController = null;
+            }
+            lastSelectedKelas = null;
+            lastSelectedSemester = null; // Reset semester
+            
             mainMenuView.dispose();
             
-            // Reset current user
             currentUser = null;
             
-            // Kembali ke login
             initializeLogin();
         }
     }
 
-    // Method untuk mendapatkan current user (bisa digunakan oleh modul lain)
     public User getCurrentUser() {
         return currentUser;
     }
 
-    // Main method untuk menjalankan aplikasi
+    public void setWaliKelasController(WaliKelasController controller) {
+        this.waliKelasController = controller;
+        LOGGER.info("WaliKelasController diatur di MainController");
+    }
+
+    public void notifyWaliKelasDataChanged() {
+        if (waliKelasController != null) {
+            waliKelasController.notifyDataChanged();
+            LOGGER.info("Notifikasi perubahan data dikirim ke WaliKelasController");
+        }
+    }
+
+    public void setLastSelectedKelas(String kelasNama) {
+        this.lastSelectedKelas = kelasNama;
+        LOGGER.info("lastSelectedKelas diatur di MainController: " + kelasNama);
+    }
+
+    public String getLastSelectedKelas() {
+        return lastSelectedKelas;
+    }
+
+    public void setLastSelectedSemester(String semester) {
+        this.lastSelectedSemester = semester;
+        LOGGER.info("lastSelectedSemester diatur di MainController: " + semester);
+    }
+
+    public String getLastSelectedSemester() {
+        return lastSelectedSemester;
+    }
+
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
             try {
                 new MainController();
-                
             } catch (Exception e) {
                 LOGGER.log(Level.SEVERE, "Gagal menginisialisasi aplikasi", e);
                 JOptionPane.showMessageDialog(null,
