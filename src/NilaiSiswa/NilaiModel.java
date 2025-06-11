@@ -9,16 +9,67 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import javax.swing.table.DefaultTableModel;
+import java.util.logging.Logger;
 
 public class NilaiModel {
+    private static final Logger LOGGER = Logger.getLogger(NilaiModel.class.getName());
     private Connection conn;
 
     public NilaiModel(Connection conn) {
         this.conn = conn;
     }
 
-    public boolean simpanNilai(int siswaId, int mapelId, int nilaiUH, int nilaiUTS, int nilaiUAS, String semester) throws SQLException {
-        double nilaiAkhir = (nilaiUH + nilaiUTS + nilaiUAS) / 3.0;
+    public boolean simpanNilai(int siswaId, int mapelId, Integer nilaiUH, Integer nilaiUTS, Integer nilaiUAS, String semester) throws SQLException {
+        // Ambil nilai saat ini dari database
+        String selectSql = """
+            SELECT nilai_uh, nilai_uts, nilai_uas
+            FROM nilai
+            WHERE siswa_id = ? AND mapel_id = ? AND semester = ?
+        """;
+        Integer currentUH = null;
+        Integer currentUTS = null;
+        Integer currentUAS = null;
+        try (PreparedStatement selectPs = conn.prepareStatement(selectSql)) {
+            selectPs.setInt(1, siswaId);
+            selectPs.setInt(2, mapelId);
+            selectPs.setString(3, semester);
+            try (ResultSet rs = selectPs.executeQuery()) {
+                if (rs.next()) {
+                    currentUH = rs.getObject("nilai_uh") != null ? rs.getInt("nilai_uh") : null;
+                    currentUTS = rs.getObject("nilai_uts") != null ? rs.getInt("nilai_uts") : null;
+                    currentUAS = rs.getObject("nilai_uas") != null ? rs.getInt("nilai_uas") : null;
+                }
+            }
+        }
+
+        // Gunakan nilai baru jika diinput, jika tidak gunakan nilai saat ini
+        Integer finalUH = nilaiUH != null ? nilaiUH : currentUH;
+        Integer finalUTS = nilaiUTS != null ? nilaiUTS : currentUTS;
+        Integer finalUAS = nilaiUAS != null ? nilaiUAS : currentUAS;
+
+        // Validasi setidaknya satu nilai harus ada
+        if (finalUH == null && finalUTS == null && finalUAS == null) {
+            LOGGER.warning("Tidak ada nilai yang akan disimpan untuk siswa_id=" + siswaId);
+            return false; // Tidak ada data untuk disimpan
+        }
+
+        // Hitung nilai akhir berdasarkan nilai yang ada
+        double nilaiAkhir = 0.0;
+        int countNonNull = 0;
+        if (finalUH != null) {
+            nilaiAkhir += finalUH;
+            countNonNull++;
+        }
+        if (finalUTS != null) {
+            nilaiAkhir += finalUTS;
+            countNonNull++;
+        }
+        if (finalUAS != null) {
+            nilaiAkhir += finalUAS;
+            countNonNull++;
+        }
+        nilaiAkhir = countNonNull > 0 ? nilaiAkhir / countNonNull : 0.0;
+
         String checkSql = "SELECT COUNT(*) FROM nilai WHERE siswa_id = ? AND mapel_id = ? AND semester = ?";
         try (PreparedStatement checkPs = conn.prepareStatement(checkSql)) {
             checkPs.setInt(1, siswaId);
@@ -28,18 +79,22 @@ public class NilaiModel {
                 if (rs.next() && rs.getInt(1) > 0) {
                     String updateSql = """
                         UPDATE nilai 
-                        SET nilai_uh = ?, nilai_uts = ?, nilai_uas = ?, nilai_akhir = ?
+                        SET nilai_uh = ?, nilai_uts = ?, nilai_uas = ?, nilai_akhir = ?, updated_at = CURRENT_TIMESTAMP
                         WHERE siswa_id = ? AND mapel_id = ? AND semester = ?
                     """;
                     try (PreparedStatement ps = conn.prepareStatement(updateSql)) {
-                        ps.setInt(1, nilaiUH);
-                        ps.setInt(2, nilaiUTS);
-                        ps.setInt(3, nilaiUAS);
+                        ps.setObject(1, finalUH);
+                        ps.setObject(2, finalUTS);
+                        ps.setObject(3, finalUAS);
                         ps.setDouble(4, nilaiAkhir);
                         ps.setInt(5, siswaId);
                         ps.setInt(6, mapelId);
                         ps.setString(7, semester);
                         int affectedRows = ps.executeUpdate();
+                        LOGGER.info("Update nilai untuk siswa_id=" + siswaId + ": affectedRows=" + affectedRows);
+                        if (affectedRows == 0) {
+                            LOGGER.warning("Update gagal untuk siswa_id=" + siswaId + ": tidak ada baris yang terpengaruh");
+                        }
                         return affectedRows > 0;
                     }
                 } else {
@@ -51,11 +106,15 @@ public class NilaiModel {
                         ps.setInt(1, siswaId);
                         ps.setInt(2, mapelId);
                         ps.setString(3, semester);
-                        ps.setInt(4, nilaiUH);
-                        ps.setInt(5, nilaiUTS);
-                        ps.setInt(6, nilaiUAS);
+                        ps.setObject(4, finalUH);
+                        ps.setObject(5, finalUTS);
+                        ps.setObject(6, finalUAS);
                         ps.setDouble(7, nilaiAkhir);
                         int affectedRows = ps.executeUpdate();
+                        LOGGER.info("Insert nilai untuk siswa_id=" + siswaId + ": affectedRows=" + affectedRows);
+                        if (affectedRows == 0) {
+                            LOGGER.warning("Insert gagal untuk siswa_id=" + siswaId + ": tidak ada baris yang terpengaruh");
+                        }
                         return affectedRows > 0;
                     }
                 }
@@ -65,13 +124,118 @@ public class NilaiModel {
 
     public boolean simpanNilai(List<Map<String, Object>> dataNilai, int mapelId) throws SQLException {
         boolean allSuccess = true;
+        String checkSql = "SELECT COUNT(*) FROM nilai WHERE siswa_id = ? AND mapel_id = ? AND semester = ?";
+        String selectSql = """
+            SELECT nilai_uh, nilai_uts, nilai_uas
+            FROM nilai
+            WHERE siswa_id = ? AND mapel_id = ? AND semester = ?
+        """;
+        String updateSql = """
+            UPDATE nilai 
+            SET nilai_uh = ?, nilai_uts = ?, nilai_uas = ?, nilai_akhir = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE siswa_id = ? AND mapel_id = ? AND semester = ?
+        """;
+        String insertSql = """
+            INSERT INTO nilai (siswa_id, mapel_id, semester, nilai_uh, nilai_uts, nilai_uas, nilai_akhir)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """;
+
         for (Map<String, Object> nilai : dataNilai) {
             int siswaId = (int) nilai.get("siswa_id");
-            int nilaiUH = (int) nilai.get("nilai_uh");
-            int nilaiUTS = (int) nilai.get("nilai_uts");
-            int nilaiUAS = (int) nilai.get("nilai_uas");
             String semester = (String) nilai.get("semester");
-            if (!simpanNilai(siswaId, mapelId, nilaiUH, nilaiUTS, nilaiUAS, semester)) {
+            Integer nilaiUH = nilai.get("nilai_uh") != null ? ((Number) nilai.get("nilai_uh")).intValue() : null;
+            Integer nilaiUTS = nilai.get("nilai_uts") != null ? ((Number) nilai.get("nilai_uts")).intValue() : null;
+            Integer nilaiUAS = nilai.get("nilai_uas") != null ? ((Number) nilai.get("nilai_uas")).intValue() : null;
+
+            // Ambil nilai saat ini dari database
+            Integer currentUH = null;
+            Integer currentUTS = null;
+            Integer currentUAS = null;
+            try (PreparedStatement selectPs = conn.prepareStatement(selectSql)) {
+                selectPs.setInt(1, siswaId);
+                selectPs.setInt(2, mapelId);
+                selectPs.setString(3, semester);
+                try (ResultSet rs = selectPs.executeQuery()) {
+                    if (rs.next()) {
+                        currentUH = rs.getObject("nilai_uh") != null ? rs.getInt("nilai_uh") : null;
+                        currentUTS = rs.getObject("nilai_uts") != null ? rs.getInt("nilai_uts") : null;
+                        currentUAS = rs.getObject("nilai_uas") != null ? rs.getInt("nilai_uas") : null;
+                    }
+                }
+            }
+
+            // Gunakan nilai baru jika diinput, jika tidak gunakan nilai saat ini
+            Integer finalUH = nilaiUH != null ? nilaiUH : currentUH;
+            Integer finalUTS = nilaiUTS != null ? nilaiUTS : currentUTS;
+            Integer finalUAS = nilaiUAS != null ? nilaiUAS : currentUAS;
+
+            // Validasi setidaknya satu nilai harus ada
+            if (finalUH == null && finalUTS == null && finalUAS == null) {
+                LOGGER.warning("Tidak ada nilai yang akan disimpan untuk siswa_id=" + siswaId);
+                continue; // Lewati entri ini
+            }
+
+            // Hitung nilai akhir berdasarkan nilai yang ada
+            double nilaiAkhir = 0.0;
+            int countNonNull = 0;
+            if (finalUH != null) {
+                nilaiAkhir += finalUH;
+                countNonNull++;
+            }
+            if (finalUTS != null) {
+                nilaiAkhir += finalUTS;
+                countNonNull++;
+            }
+            if (finalUAS != null) {
+                nilaiAkhir += finalUAS;
+                countNonNull++;
+            }
+            if (countNonNull > 0) {
+                nilaiAkhir /= countNonNull;
+            }
+
+            try (PreparedStatement checkPs = conn.prepareStatement(checkSql)) {
+                checkPs.setInt(1, siswaId);
+                checkPs.setInt(2, mapelId);
+                checkPs.setString(3, semester);
+                try (ResultSet rs = checkPs.executeQuery()) {
+                    if (rs.next() && rs.getInt(1) > 0) {
+                        // Update data yang sudah ada
+                        try (PreparedStatement ps = conn.prepareStatement(updateSql)) {
+                            ps.setObject(1, finalUH);
+                            ps.setObject(2, finalUTS);
+                            ps.setObject(3, finalUAS);
+                            ps.setDouble(4, nilaiAkhir);
+                            ps.setInt(5, siswaId);
+                            ps.setInt(6, mapelId);
+                            ps.setString(7, semester);
+                            int affectedRows = ps.executeUpdate();
+                            if (affectedRows == 0) {
+                                allSuccess = false;
+                                LOGGER.warning("Update gagal untuk siswa_id=" + siswaId + ": tidak ada baris yang terpengaruh");
+                            }
+                        }
+                    } else {
+                        // Insert data baru
+                        try (PreparedStatement ps = conn.prepareStatement(insertSql)) {
+                            ps.setInt(1, siswaId);
+                            ps.setInt(2, mapelId);
+                            ps.setString(3, semester);
+                            ps.setObject(4, finalUH);
+                            ps.setObject(5, finalUTS);
+                            ps.setObject(6, finalUAS);
+                            ps.setDouble(7, nilaiAkhir);
+                            int affectedRows = ps.executeUpdate();
+                            if (affectedRows == 0) {
+                                allSuccess = false;
+                                LOGGER.warning("Insert gagal untuk siswa_id=" + siswaId + ": tidak ada baris yang terpengaruh");
+                            }
+                        }
+                    }
+                }
+            } catch (SQLException e) {
+                LOGGER.severe("Gagal menyimpan nilai untuk siswa_id=" + siswaId + ": " + e.getMessage());
+                e.printStackTrace();
                 allSuccess = false;
             }
         }
@@ -140,34 +304,34 @@ public class NilaiModel {
         return list;
     }
 
-public List<Map<String, Object>> getNilaiByKelasDanMapel(int kelasId, int mapelId, String semester) throws SQLException {
-    List<Map<String, Object>> list = new ArrayList<>();
-    String sql = """
-        SELECT s.id, s.nama, s.nis, n.nilai_uh, n.nilai_uts, n.nilai_uas, n.nilai_akhir
-        FROM siswa s
-        LEFT JOIN nilai n ON s.id = n.siswa_id AND n.mapel_id = ? AND n.semester = ?
-        WHERE s.kelas_id = ?
+    public List<Map<String, Object>> getNilaiByKelasDanMapel(int kelasId, int mapelId, String semester) throws SQLException {
+        List<Map<String, Object>> list = new ArrayList<>();
+        String sql = """
+            SELECT s.id, s.nama, s.nis, n.nilai_uh, n.nilai_uts, n.nilai_uas, n.nilai_akhir
+            FROM siswa s
+            LEFT JOIN nilai n ON s.id = n.siswa_id AND n.mapel_id = ? AND n.semester = ?
+            WHERE s.kelas_id = ?
         """;
-    try (PreparedStatement ps = conn.prepareStatement(sql)) {
-        ps.setInt(1, mapelId);
-        ps.setString(2, semester);
-        ps.setInt(3, kelasId);
-        try (ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) {
-                Map<String, Object> nilai = new HashMap<>();
-                nilai.put("siswa_id", rs.getInt("id"));
-                nilai.put("nama", rs.getString("nama"));
-                nilai.put("nis", rs.getString("nis"));
-                nilai.put("nilai_uh", rs.getObject("nilai_uh") != null ? rs.getInt("nilai_uh") : 0);
-                nilai.put("nilai_uts", rs.getObject("nilai_uts") != null ? rs.getInt("nilai_uts") : 0);
-                nilai.put("nilai_uas", rs.getObject("nilai_uas") != null ? rs.getInt("nilai_uas") : 0);
-                nilai.put("nilai_akhir", rs.getObject("nilai_akhir") != null ? rs.getDouble("nilai_akhir") : 0.0);
-                list.add(nilai);
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, mapelId);
+            ps.setString(2, semester);
+            ps.setInt(3, kelasId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Map<String, Object> nilai = new HashMap<>();
+                    nilai.put("siswa_id", rs.getInt("id"));
+                    nilai.put("nama", rs.getString("nama"));
+                    nilai.put("nis", rs.getString("nis"));
+                    nilai.put("nilai_uh", rs.getObject("nilai_uh"));
+                    nilai.put("nilai_uts", rs.getObject("nilai_uts"));
+                    nilai.put("nilai_uas", rs.getObject("nilai_uas"));
+                    nilai.put("nilai_akhir", rs.getObject("nilai_akhir"));
+                    list.add(nilai);
+                }
             }
         }
+        return list;
     }
-    return list;
-}
 
     public String getNamaGuru(int guruId) throws SQLException {
         String sql = "SELECT nama FROM users WHERE id = ? AND role = 'guru'";
