@@ -5,15 +5,25 @@ import java.util.ArrayList;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.io.*;
+
+import main.MainController;
 import NilaiSiswa.*;
 
 public class AbsensiController {
     private AbsensiModel model;
     private AbsensiView view;
+    private MainController mainController;
 
-    public AbsensiController(AbsensiModel model, AbsensiView view) {
+    public AbsensiController(AbsensiModel model, AbsensiView view, MainController mainController) {
         this.model = model;
         this.view = view;
+        this.mainController = mainController;
+
+        if (mainController == null) {
+            JOptionPane.showMessageDialog(view, "Sesi login tidak valid, gagal memuat modul Absensi!", "Error", JOptionPane.ERROR_MESSAGE);
+            view.dispose();
+            return;
+        }
 
         isiComboKelas();
 
@@ -23,26 +33,25 @@ public class AbsensiController {
         view.setKeWaliKelasAction(e -> keWaliKelas());
 
         view.setTambahSiswaAction(e -> {
-        String nama = view.fieldNamaSiswa.getText().trim();
-        String nis = view.fieldNis.getText().trim();
-        String kelas = (String) view.comboKelas.getSelectedItem();
+            String nama = view.fieldNamaSiswa.getText().trim();
+            String nis = view.fieldNis.getText().trim();
+            String kelas = (String) view.comboKelas.getSelectedItem();
 
-        if (nama.isEmpty() || nis.isEmpty() || kelas == null) {
-            JOptionPane.showMessageDialog(view, "Lengkapi semua data siswa.");
-            return;
-        }
+            if (nama.isEmpty() || nis.isEmpty() || kelas == null) {
+                JOptionPane.showMessageDialog(view, "Lengkapi semua data siswa.");
+                return;
+            }
 
-        boolean sukses = model.tambahSiswa(nama, nis, kelas);
-        if (sukses) {
-            JOptionPane.showMessageDialog(view, "Siswa berhasil ditambahkan.");
-            view.fieldNamaSiswa.setText("");
-            view.fieldNis.setText("");
-            muatSiswa(); // Refresh daftar siswa
-        } else {
-            JOptionPane.showMessageDialog(view, "Gagal menambahkan siswa.");
-        }
+            boolean sukses = model.tambahSiswa(nama, nis, kelas);
+            if (sukses) {
+                JOptionPane.showMessageDialog(view, "Siswa berhasil ditambahkan.");
+                view.fieldNamaSiswa.setText("");
+                view.fieldNis.setText("");
+                muatSiswa(); // Refresh daftar siswa
+            } else {
+                JOptionPane.showMessageDialog(view, "Gagal menambahkan siswa.");
+            }
         });
-
     }
 
     private void isiComboKelas() {
@@ -121,10 +130,15 @@ public class AbsensiController {
     }
 
     private void keWaliKelas() {
-        try{
+        try {
+            if (mainController == null) {
+                JOptionPane.showMessageDialog(view, "Sesi login tidak valid, gagal membuka Wali Kelas!", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
             WaliKelasView waliKelasView = new WaliKelasView();
             WaliKelasModel waliKelasModel = new WaliKelasModel();
-            WaliKelasController waliKelasController = new WaliKelasController(waliKelasView, waliKelasModel);
+            new WaliKelasController(waliKelasView, waliKelasModel, mainController);
             waliKelasView.setVisible(true);
             view.dispose(); // Tutup view absensi
         } catch (Exception e) {
@@ -136,8 +150,9 @@ public class AbsensiController {
         SwingUtilities.invokeLater(() -> {
             AbsensiModel model = new AbsensiModel();
             AbsensiView view = new AbsensiView();
-            new AbsensiController(model, view);
+            MainController mainController = new MainController(); // Sementara, harus disesuaikan
+            new AbsensiController(model, view, mainController);
             view.setVisible(true);
         });
-    }
+    } 
 }
