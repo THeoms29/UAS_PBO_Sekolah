@@ -2,25 +2,40 @@ package NilaiSiswa;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
-import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import shared.Koneksi;
+import java.util.logging.Logger;
+import javax.swing.border.*;
+import javax.swing.table.DefaultTableModel;
+import main.MainController;
 
 public class WaliKelasView extends JFrame {
+    private static final Logger LOGGER = Logger.getLogger(WaliKelasView.class.getName());
     private JComboBox<String> comboKelas;
     private JComboBox<String> comboSemester;
     private JButton btnExportPerKelas;
     private JButton btnExportPerSiswa;
+    private JButton btnExportPDFAll;
     private JButton btnKeInputNilai;
+    private JButton btnInputNilaiBaru;
     private JTable table;
     private DefaultTableModel tableModel;
     private JLabel lblKelasInfo;
     private JLabel lblStatus;
     private Image contentBackground;
+    private Color primaryColor = new Color(70, 130, 180);
+    private Color buttonColor = new Color(0, 105, 180);
+    private Color exportButtonColor = new Color(0, 128, 0); // Hijau tua
+    private Color navButtonColor = new Color(139, 69, 19);   // Cokelat
+    private WaliKelasController controller;
+    private MainController mainController;
 
+    public void setController(WaliKelasController controller) {
+        this.controller = controller;
+    }
+
+    public void setMainController(MainController mainController) {
+        this.mainController = mainController;
+    }
     public WaliKelasView() {
         loadBackgrounds();
         initUI();
@@ -30,27 +45,27 @@ public class WaliKelasView extends JFrame {
         try {
             java.net.URL imgURL = getClass().getResource("/shared/Asset/BG1.JPEG");
             if (imgURL == null) {
-                System.out.println("Resource /shared/Asset/BG1.JPEG tidak ditemukan di classpath");
+                LOGGER.warning("Resource /shared/Asset/BG1.JPEG tidak ditemukan di classpath");
                 contentBackground = null;
             } else {
                 ImageIcon contentIcon = new ImageIcon(imgURL);
                 if (contentIcon.getImageLoadStatus() == MediaTracker.COMPLETE) {
                     contentBackground = contentIcon.getImage();
-                    System.out.println("Latar belakang BG1.JPEG berhasil dimuat");
+                    LOGGER.info("Latar belakang BG1.JPEG berhasil dimuat");
                 } else {
-                    System.out.println("Gagal memuat BG1.JPEG, status: " + contentIcon.getImageLoadStatus());
+                    LOGGER.warning("Gagal memuat BG1.JPEG, status: " + contentIcon.getImageLoadStatus());
                     contentBackground = null;
                 }
             }
         } catch (Exception e) {
-            System.out.println("Error memuat latar belakang: " + e.getMessage());
+            LOGGER.severe("Error memuat latar belakang: " + e.getMessage());
             contentBackground = null;
         }
     }
 
     private void initUI() {
         setTitle("Aplikasi Rekap Nilai & Absensi - Wali Kelas");
-        setSize(1200, 700);
+        setSize(1250, 750);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
@@ -58,20 +73,27 @@ public class WaliKelasView extends JFrame {
             @Override
             protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
+                int width = getWidth();
+                int height = getHeight();
+                if (width <= 0 || height <= 0) {
+                    return;
+                }
                 if (contentBackground != null) {
-                    int width = getWidth();
-                    int height = getHeight();
                     g.drawImage(contentBackground, 0, 0, width, height, this);
-                } else {
+                } else if (g instanceof Graphics2D) {
                     Graphics2D g2d = (Graphics2D) g;
                     Color color1 = new Color(240, 248, 255);
                     Color color2 = new Color(230, 240, 250);
-                    GradientPaint gp = new GradientPaint(0, 0, color1, 0, getHeight(), color2);
+                    GradientPaint gp = new GradientPaint(0, 0, color1, 0, height, color2);
                     g2d.setPaint(gp);
-                    g2d.fillRect(0, 0, getWidth(), getHeight());
+                    g2d.fillRect(0, 0, width, height);
+                } else {
+                    g.setColor(new Color(240, 248, 255));
+                    g.fillRect(0, 0, width, height);
                 }
             }
         };
+        mainPanel.setOpaque(false);
         mainPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
 
         // Panel Header
@@ -80,237 +102,229 @@ public class WaliKelasView extends JFrame {
 
         lblKelasInfo = new JLabel(" ", SwingConstants.LEFT);
         lblKelasInfo.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        lblKelasInfo.setForeground(new Color(70, 130, 180));
+        lblKelasInfo.setForeground(primaryColor);
 
         JLabel titleLabel = new JLabel("REKAP NILAI DAN ABSENSI SISWA");
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
-        titleLabel.setForeground(new Color(70, 130, 180));
+        titleLabel.setForeground(primaryColor);
         titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
 
         headerPanel.add(lblKelasInfo, BorderLayout.WEST);
         headerPanel.add(titleLabel, BorderLayout.CENTER);
-        headerPanel.add(Box.createRigidArea(new Dimension(0, 10)), BorderLayout.SOUTH);
+        headerPanel.add(Box.createRigidArea(new Dimension(150, 0)), BorderLayout.EAST);
 
-        // Panel Kontrol
-        JPanel controlPanel = new JPanel();
-        controlPanel.setLayout(new BoxLayout(controlPanel, BoxLayout.X_AXIS));
-        controlPanel.setOpaque(false);
-        controlPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
+        // Top Control Panel (Kelas, Semester, Export Buttons)
+        JPanel topControlPanel = new JPanel(new GridBagLayout());
+        topControlPanel.setOpaque(false);
+        topControlPanel.setPreferredSize(new Dimension(1200, 80));
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(5, 10, 5, 10);
+        gbc.anchor = GridBagConstraints.WEST;
 
         JLabel lblKelas = new JLabel("Kelas:");
-        lblKelas.setPreferredSize(new Dimension(80, 20));
-        lblKelas.setForeground(Color.WHITE);
+        lblKelas.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        lblKelas.setForeground(primaryColor);
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        topControlPanel.add(lblKelas, gbc);
 
         comboKelas = new JComboBox<>();
-        comboKelas.setPreferredSize(new Dimension(250, 35));
-        comboKelas.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        comboKelas.setMaximumSize(new Dimension(250, 35));
+        comboKelas.setPreferredSize(new Dimension(150, 30));
+        gbc.gridx = 1;
+        gbc.gridy = 0;
+        topControlPanel.add(comboKelas, gbc);
 
         JLabel lblSemester = new JLabel("Semester:");
-        lblSemester.setPreferredSize(new Dimension(80, 20));
-        lblSemester.setForeground(Color.WHITE);
+        lblSemester.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        lblSemester.setForeground(primaryColor);
+        gbc.gridx = 2;
+        gbc.gridy = 0;
+        topControlPanel.add(lblSemester, gbc);
 
         comboSemester = new JComboBox<>(new String[]{"Semester 1", "Semester 2"});
-        comboSemester.setPreferredSize(new Dimension(120, 35));
-        comboSemester.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        comboSemester.setMaximumSize(new Dimension(120, 35));
+        comboSemester.setPreferredSize(new Dimension(120, 30));
+        gbc.gridx = 3;
+        gbc.gridy = 0;
+        topControlPanel.add(comboSemester, gbc);
 
-        btnExportPerKelas = createStyledButton("Export Per Kelas", new Color(70, 130, 180));
-        btnExportPerSiswa = createStyledButton("Export Per Siswa", new Color(70, 130, 180));
-        btnKeInputNilai = createStyledButton("Ke Input Nilai", new Color(139, 69, 19));
+        btnExportPerKelas = createStyledButton("Export PDF Per Kelas", exportButtonColor);
+        btnExportPerKelas.setToolTipText("Export data untuk seluruh kelas ke PDF");
+        addButtonShadow(btnExportPerKelas);
+        gbc.gridx = 4;
+        gbc.gridy = 0;
+        topControlPanel.add(btnExportPerKelas, gbc);
+        LOGGER.info("Button Export PDF Per Kelas added to topControlPanel");
 
-        controlPanel.add(lblKelas);
-        controlPanel.add(Box.createRigidArea(new Dimension(10, 0)));
-        controlPanel.add(comboKelas);
-        controlPanel.add(Box.createRigidArea(new Dimension(20, 0)));
-        controlPanel.add(lblSemester);
-        controlPanel.add(Box.createRigidArea(new Dimension(10, 0)));
-        controlPanel.add(comboSemester);
-        controlPanel.add(Box.createHorizontalGlue());
-        controlPanel.add(btnExportPerKelas);
-        controlPanel.add(Box.createRigidArea(new Dimension(10, 0)));
-        controlPanel.add(btnExportPerSiswa);
-        controlPanel.add(Box.createRigidArea(new Dimension(10, 0)));
-        controlPanel.add(btnKeInputNilai);
+        btnExportPerSiswa = createStyledButton("Export PDF Per Siswa", exportButtonColor);
+        btnExportPerSiswa.setToolTipText("Export data untuk siswa terpilih ke PDF");
+        addButtonShadow(btnExportPerSiswa);
+        gbc.gridx = 5;
+        gbc.gridy = 0;
+        topControlPanel.add(btnExportPerSiswa, gbc);
+        LOGGER.info("Button Export PDF Per Siswa added to topControlPanel");
 
-        // Pengaturan Tabel
-        String[] kolom = {"NIS", "Nama Siswa", "Nilai UH", "Nilai UTS", "Nilai UAS", "Nilai Akhir", 
-                         "Hadir", "Izin", "Sakit", "Alfa", "Total"};
-        tableModel = new DefaultTableModel(kolom, 0) {
+        btnKeInputNilai = createStyledButton("Ke Input Nilai", navButtonColor);
+        btnKeInputNilai.setToolTipText("Navigasi ke halaman input nilai");
+        addButtonShadow(btnKeInputNilai);
+        gbc.gridx = 6;
+        gbc.gridy = 0;
+        topControlPanel.add(btnKeInputNilai, gbc);
+        LOGGER.info("Button Ke Input Nilai added to topControlPanel");
+
+        // Panel Table
+        JPanel tablePanel = new JPanel(new BorderLayout());
+        tablePanel.setOpaque(false);
+        tablePanel.setBorder(BorderFactory.createTitledBorder(
+                BorderFactory.createLineBorder(primaryColor, 2),
+                "Daftar Nilai dan Absensi",
+                TitledBorder.LEFT,
+                TitledBorder.TOP,
+                new Font("Segoe UI", Font.BOLD, 12),
+                primaryColor));
+
+        tableModel = new DefaultTableModel(
+                new Object[]{"NIS", "Nama", "Nilai UH", "Nilai UTS", "Nilai UAS", "Nilai Akhir", "Hadir", "Izin", "Sakit", "Alfa", "Total"}, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
                 return false;
             }
-            @Override
-            public Class<?> getColumnClass(int columnIndex) {
-                if (columnIndex >= 2 && columnIndex <= 9) return Double.class;
-                return String.class;
-            }
         };
 
         table = new JTable(tableModel);
+        table.setRowHeight(25);
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        table.setRowHeight(30);
-        table.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        table.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 13));
-        table.setShowGrid(true);
-        table.setGridColor(new Color(220, 220, 220));
-        table.setIntercellSpacing(new Dimension(0, 0));
-        table.setFillsViewportHeight(true);
-        table.setSelectionBackground(new Color(220, 240, 255));
-        table.setSelectionForeground(Color.BLACK);
 
-        table.setDefaultRenderer(Double.class, new DefaultTableCellRenderer() {
-            @Override
-            public Component getTableCellRendererComponent(JTable table, Object value, 
-                    boolean isSelected, boolean hasFocus, int row, int column) {
-                Component c = super.getTableCellRendererComponent(table, value, 
-                        isSelected, hasFocus, row, column);
-                
-                if (value instanceof Double) {
-                    double score = (Double) value;
-                    if (score < 65) {
-                        c.setBackground(new Color(255, 200, 200));
-                    } else if (score < 75) {
-                        c.setBackground(new Color(255, 255, 200));
-                    } else {
-                        c.setBackground(new Color(200, 255, 200));
-                    }
-                    
-                    if (isSelected) {
-                        c.setBackground(new Color(180, 220, 255));
-                    }
-                }
-                
-                setHorizontalAlignment(SwingConstants.CENTER);
-                return c;
-            }
-        });
+        DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
+        centerRenderer.setHorizontalAlignment(SwingConstants.CENTER);
+        for (int i = 0; i < table.getColumnCount(); i++) {
+            table.getColumnModel().getColumn(i).setCellRenderer(centerRenderer);
+        }
 
         JScrollPane scrollPane = new JScrollPane(table);
-        scrollPane.setBorder(BorderFactory.createEmptyBorder());
-        scrollPane.getViewport().setBackground(Color.WHITE);
+        scrollPane.setPreferredSize(new Dimension(1200, 400));
+        tablePanel.add(scrollPane, BorderLayout.CENTER);
 
-        // Bilah Status
-        lblStatus = new JLabel("Siap", SwingConstants.RIGHT);
-        lblStatus.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        lblStatus.setForeground(new Color(70, 130, 180));
-        
-        JPanel statusPanel = new JPanel(new BorderLayout());
+        // Button Panel (Export PDF All, Navigation Buttons)
+        JPanel buttonPanel = new JPanel(new GridBagLayout());
+        buttonPanel.setOpaque(false);
+        buttonPanel.setPreferredSize(new Dimension(1200, 100));
+        gbc = new GridBagConstraints();
+        gbc.insets = new Insets(10, 20, 10, 20);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        btnExportPDFAll = createStyledButton("Export PDF All", exportButtonColor);
+        btnExportPDFAll.setToolTipText("Export semua data kelas ke PDF");
+        btnExportPDFAll.setVisible(true);
+        addButtonShadow(btnExportPDFAll);
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        buttonPanel.add(btnExportPDFAll, gbc);
+        LOGGER.info("Button Export PDF All added to buttonPanel");
+
+        btnInputNilaiBaru = createStyledButton("Input Nilai Baru", navButtonColor);
+        btnInputNilaiBaru.setToolTipText("Tambah data nilai baru");
+        addButtonShadow(btnInputNilaiBaru);
+        gbc.gridx = 1;
+        gbc.gridy = 0;
+        buttonPanel.add(btnInputNilaiBaru, gbc);
+        LOGGER.info("Button Input Nilai Baru added to buttonPanel");
+
+        // Panel Status
+        JPanel statusPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         statusPanel.setOpaque(false);
-        statusPanel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
-        statusPanel.add(lblStatus, BorderLayout.EAST);
 
-        // Panel Tengah
-        JPanel centerPanel = new JPanel(new BorderLayout(10, 10));
-        centerPanel.setOpaque(false);
-        centerPanel.add(controlPanel, BorderLayout.NORTH);
-        centerPanel.add(scrollPane, BorderLayout.CENTER);
+        lblStatus = new JLabel("Status: Siap");
+        lblStatus.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        lblStatus.setForeground(primaryColor.darker());
+        statusPanel.add(lblStatus);
 
+        // Assemble Main Panel
         mainPanel.add(headerPanel, BorderLayout.NORTH);
-        mainPanel.add(centerPanel, BorderLayout.CENTER);
-        mainPanel.add(statusPanel, BorderLayout.SOUTH);
+        mainPanel.add(topControlPanel, BorderLayout.PAGE_START);
+        mainPanel.add(tablePanel, BorderLayout.CENTER);
+        mainPanel.add(buttonPanel, BorderLayout.SOUTH);
+        mainPanel.add(statusPanel, BorderLayout.PAGE_END);
 
-        getContentPane().add(mainPanel);
+        setContentPane(mainPanel);
 
-        // Event Listeners
-        btnKeInputNilai.addActionListener(e -> bukaInputNilaiView());
+        // Force revalidate and repaint
+        mainPanel.revalidate();
+        mainPanel.repaint();
+        LOGGER.info("Main panel revalidated and repainted");
     }
 
-    private void bukaInputNilaiView() {
-        SwingUtilities.invokeLater(() -> {
-            try {
-                System.out.println("Membuka InputNilaiView...");
-                Connection conn = Koneksi.getConnection();
-                if (conn == null) {
-                    JOptionPane.showMessageDialog(this, "Gagal koneksi ke database!", 
-                        "Error", JOptionPane.ERROR_MESSAGE);
-                    return;
-                }
-
-                String guruIdStr = null;
-                while (guruIdStr == null || guruIdStr.trim().isEmpty()) {
-                    guruIdStr = JOptionPane.showInputDialog(this, "Masukkan ID Guru:");
-                    if (guruIdStr == null || guruIdStr.trim().isEmpty()) {
-                        JOptionPane.showMessageDialog(this, "ID Guru diperlukan!", 
-                            "Error", JOptionPane.ERROR_MESSAGE);
-                    }
-                }
-                int guruId = Integer.parseInt(guruIdStr);
-
-                String mapelIdStr = null;
-                while (mapelIdStr == null || mapelIdStr.trim().isEmpty()) {
-                    mapelIdStr = JOptionPane.showInputDialog(this, "Masukkan ID Mapel:");
-                    if (mapelIdStr == null || mapelIdStr.trim().isEmpty()) {
-                        JOptionPane.showMessageDialog(this, "ID Mapel diperlukan!", 
-                            "Error", JOptionPane.ERROR_MESSAGE);
-                    }
-                }
-                int mapelId = Integer.parseInt(mapelIdStr);
-
-                try (PreparedStatement psGuru = conn.prepareStatement("SELECT id FROM users WHERE id = ? AND role = 'guru'")) {
-                    psGuru.setInt(1, guruId);
-                    if (!psGuru.executeQuery().next()) {
-                        JOptionPane.showMessageDialog(this, "ID Guru " + guruId + " tidak valid!", 
-                            "Error", JOptionPane.ERROR_MESSAGE);
-                        return;
-                    }
-                }
-                try (PreparedStatement psMapel = conn.prepareStatement("SELECT id FROM mapel WHERE id = ?")) {
-                    psMapel.setInt(1, mapelId);
-                    if (!psMapel.executeQuery().next()) {
-                        JOptionPane.showMessageDialog(this, "ID Mapel " + mapelId + " tidak valid!", 
-                            "Error", JOptionPane.ERROR_MESSAGE);
-                        return;
-                    }
-                }
-
-                InputNilaiView inputView = new InputNilaiView();
-                NilaiModel model = new NilaiModel(conn);
-                NilaiController controller = new NilaiController(inputView, model, guruId, mapelId);
-                inputView.setController(controller);
-                controller.loadDataAwal();
-                inputView.setVisible(true);
-                dispose();
-            } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(this, "ID Guru atau Mapel harus berupa angka.", 
-                    "Error", JOptionPane.ERROR_MESSAGE);
-                ex.printStackTrace();
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Gagal membuka fitur Input Nilai: " + ex.getMessage(), 
-                    "Error", JOptionPane.ERROR_MESSAGE);
-                ex.printStackTrace();
-            }
-        });
-    }
-
-    private JButton createStyledButton(String text, Color color) {
+    private JButton createStyledButton(String text, Color bgColor) {
         JButton button = new JButton(text);
-        button.setBackground(Color.WHITE);
-        button.setForeground(color);
+        button.setPreferredSize(new Dimension(180, 35));
+        button.setBackground(bgColor);
+        button.setForeground(Color.WHITE);
         button.setFocusPainted(false);
         button.setFont(new Font("Segoe UI", Font.BOLD, 13));
         button.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(color, 1),
-            BorderFactory.createEmptyBorder(8, 20, 8, 20)
+                BorderFactory.createLineBorder(bgColor.darker(), 2),
+                BorderFactory.createEmptyBorder(8, 20, 8, 20)
         ));
-        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        
+        button.setOpaque(true);
+        button.setContentAreaFilled(true);
+
         button.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseEntered(java.awt.event.MouseEvent evt) {
-                button.setBackground(new Color(245, 245, 245));
-                button.setForeground(color.brighter());
+                button.setBackground(bgColor.brighter());
             }
             public void mouseExited(java.awt.event.MouseEvent evt) {
-                button.setBackground(Color.WHITE);
-                button.setForeground(color);
+                button.setBackground(bgColor);
             }
         });
-        
+
+        LOGGER.info("Created styled button: " + text + " with foreground color: " + button.getForeground());
         return button;
     }
 
-    // Getter
+    private void addButtonShadow(JButton button) {
+        Border line = new LineBorder(button.getBackground().darker());
+        Border margin = new EmptyBorder(5, 15, 5, 15);
+        Border compound = new CompoundBorder(line, margin);
+
+        button.setBorder(compound);
+        button.setContentAreaFilled(false);
+        button.setOpaque(true);
+
+        button.getModel().addChangeListener(e -> {
+            if (button.getModel().isPressed()) {
+                button.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(button.getBackground().darker().darker(), 2),
+                        BorderFactory.createEmptyBorder(5, 15, 5, 15)
+                ));
+            } else {
+                button.setBorder(compound);
+            }
+        });
+    }
+
+    public void setKelasList(String[] kelasList) {
+        DefaultComboBoxModel<String> model = new DefaultComboBoxModel<>(kelasList);
+        comboKelas.setModel(model);
+        LOGGER.info("Kelas list set with " + kelasList.length + " items");
+    }
+
+    public void setTableData(Object[][] data) {
+        tableModel.setRowCount(0);
+        for (Object[] row : data) {
+            tableModel.addRow(row);
+        }
+        LOGGER.info("Table data set with " + data.length + " rows");
+    }
+
+    public void setKelasInfo(String text) {
+        lblKelasInfo.setText(text);
+        LOGGER.info("Kelas info set to: " + text);
+    }
+
+    public void setStatusMessage(String text) {
+        lblStatus.setText("Status: " + text);
+        LOGGER.info("Status message set to: " + text);
+    }
+
     public JComboBox<String> getComboKelas() {
         return comboKelas;
     }
@@ -327,24 +341,23 @@ public class WaliKelasView extends JFrame {
         return btnExportPerSiswa;
     }
 
-    public DefaultTableModel getTableModel() {
-        return tableModel;
+    public JButton getBtnExportPDFAll() {
+        return btnExportPDFAll;
+    }
+
+    public JButton getBtnKeInputNilai() {
+        return btnKeInputNilai;
+    }
+
+    public JButton getBtnInputNilaiBaru() {
+        return btnInputNilaiBaru;
     }
 
     public JTable getTable() {
         return table;
     }
 
-    public void setKelasInfo(String kelas) {
-        lblKelasInfo.setText("Kelas: " + kelas);
-    }
-
-    public void setStatusMessage(String message) {
-        lblStatus.setText(message);
-    }
-
-    @Override
-    public void dispose() {
-        super.dispose();
+    public DefaultTableModel getTableModel() {
+        return tableModel;
     }
 }
