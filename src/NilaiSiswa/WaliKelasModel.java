@@ -130,33 +130,34 @@ public class WaliKelasModel {
         return list;
     }
 
-    public boolean checkForUpdates(int kelasId, String semester) {
-        String sql = """
-            SELECT MAX(last_updated) AS last_update
-            FROM (
-                SELECT MAX(updated_at) AS last_updated FROM nilai 
-                WHERE siswa_id IN (SELECT id FROM siswa WHERE kelas_id = ?) AND semester = ?
-                UNION ALL
-                SELECT MAX(updated_at) AS last_updated FROM absensi 
-                WHERE siswa_id IN (SELECT id FROM siswa WHERE kelas_id = ?)
-            ) AS combined
-            """;
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, kelasId);
-            ps.setString(2, semester);
-            ps.setInt(3, kelasId);
-            ResultSet rs = ps.executeQuery();
-            if (rs.next() && rs.getTimestamp("last_update") != null) {
-                long currentTimestamp = rs.getTimestamp("last_update").getTime();
-                if (currentTimestamp > lastUpdateTimestamp) {
-                    lastUpdateTimestamp = currentTimestamp;
-                    return true;
-                }
+public boolean checkForUpdates(int kelasId, String semester) {
+    String sql = """
+        SELECT MAX(last_updated) AS last_update
+        FROM (
+            SELECT MAX(updated_at) AS last_updated FROM nilai 
+            WHERE siswa_id IN (SELECT id FROM siswa WHERE kelas_id = ?) AND semester = ?
+            UNION ALL
+            SELECT MAX(updated_at) AS last_updated FROM absensi 
+            WHERE siswa_id IN (SELECT id FROM siswa WHERE kelas_id = ?)
+        ) AS combined
+    """;
+    try (PreparedStatement ps = conn.prepareStatement(sql)) {
+        ps.setInt(1, kelasId);
+        ps.setString(2, semester);
+        ps.setInt(3, kelasId);
+        ResultSet rs = ps.executeQuery();
+        if (rs.next()) {
+            Timestamp lastUpdate = rs.getTimestamp("last_update");
+            long currentTimestamp = lastUpdate != null ? lastUpdate.getTime() : 0; // Gunakan 0 jika null
+            if (currentTimestamp > lastUpdateTimestamp || lastUpdateTimestamp == 0) { // Perbarui jika timestamp baru lebih besar atau belum diinisialisasi
+                lastUpdateTimestamp = currentTimestamp;
+                return true;
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
-            JOptionPane.showMessageDialog(null, "Gagal memeriksa pembaruan: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
-        return false;
+    } catch (SQLException e) {
+        e.printStackTrace();
+        JOptionPane.showMessageDialog(null, "Gagal memeriksa pembaruan: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
     }
+    return false;
+}
 }
