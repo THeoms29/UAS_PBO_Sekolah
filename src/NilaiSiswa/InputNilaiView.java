@@ -88,8 +88,18 @@ public class InputNilaiView extends JFrame {
         setTitle("Aplikasi Input Nilai Siswa");
         setSize(1200, 700);
         setLocationRelativeTo(null);
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         setLayout(new BorderLayout(10, 10));
+        addWindowListener(new java.awt.event.WindowAdapter() {
+        @Override
+        public void windowClosing(java.awt.event.WindowEvent e) {
+            if (mainController != null) {
+                mainController.showMainMenu();
+                LOGGER.info("InputNilaiView ditutup, kembali ke MainMenuView");
+            }
+            dispose();
+        }
+    });
 
         // Panel Header
         JPanel panelHeader = new JPanel(new BorderLayout());
