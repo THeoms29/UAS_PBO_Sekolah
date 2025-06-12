@@ -160,87 +160,94 @@ public class MainController {
         }
     }
 
-    public void openNilaiSiswaModule() {
-        if (currentUser == null || !currentUser.getRole().equals("guru")) {
-            JOptionPane.showMessageDialog(mainMenuView, "Hanya guru yang dapat mengakses fitur input nilai!", "Peringatan", JOptionPane.WARNING_MESSAGE);
-            LOGGER.warning("Akses input nilai ditolak: user=" + (currentUser != null ? currentUser.getRole() : "null"));
-            return;
+public void openNilaiSiswaModule() {
+    if (currentUser == null || !currentUser.getRole().equals("guru")) {
+        JOptionPane.showMessageDialog(mainMenuView, "Hanya guru yang dapat mengakses fitur input nilai!", "Peringatan", JOptionPane.WARNING_MESSAGE);
+        LOGGER.warning("Akses input nilai ditolak: user=" + (currentUser != null ? currentUser.getRole() : "null"));
+        return;
+    }
+
+    SwingUtilities.invokeLater(() -> {
+        try {
+            int userId = currentUser.getId();
+            int mapelId = getMapelIdForGuru(userId);
+            if (mapelId == -1) {
+                JOptionPane.showMessageDialog(mainMenuView, "Tidak ada mata pelajaran yang terkait dengan guru ini!", "Error", JOptionPane.ERROR_MESSAGE);
+                LOGGER.severe("Tidak ada mapel_id untuk guru_id=" + userId);
+                return;
+            }
+
+            InputNilaiView inputNilaiView = new InputNilaiView();
+            inputNilaiView.setMainController(this);
+            NilaiModel nilaiModel = new NilaiModel(Koneksi.getConnection());
+            nilaiController = new NilaiController(inputNilaiView, nilaiModel, this);
+            inputNilaiView.setController(nilaiController);
+            if (lastSelectedKelas != null) {
+                nilaiController.setLastSelectedKelas(lastSelectedKelas);
+            }
+            if (lastSelectedSemester != null) {
+                nilaiController.setLastSelectedSemester(lastSelectedSemester);
+            }
+            mainMenuView.setVisible(false); // Sembunyikan, bukan dispose
+            inputNilaiView.setVisible(true);
+            nilaiController.loadDataAwal();
+            LOGGER.info("Membuka modul Input Nilai untuk guru_id=" + userId + ", mapel_id=" + mapelId + ", kelas=" + lastSelectedKelas + ", semester=" + lastSelectedSemester);
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(mainMenuView, "Gagal membuka fitur Input Nilai: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            if (mainMenuView != null) {
+                mainMenuView.setVisible(true); // Tampilkan kembali jika error
+            }
+            LOGGER.severe("Gagal membuka Input Nilai: " + e.getMessage());
         }
+    });
+}
+public void openWaliKelasModule() {
+    if (currentUser == null || !currentUser.getRole().equals("guru")) {
+        JOptionPane.showMessageDialog(mainMenuView, "Hanya guru yang dapat mengakses fitur Wali Kelas!", "Peringatan", JOptionPane.WARNING_MESSAGE);
+        LOGGER.warning("Akses Wali Kelas ditolak: user=" + (currentUser != null ? currentUser.getRole() : "null"));
+        return;
+    }
 
-        SwingUtilities.invokeLater(() -> {
-            try {
-                int userId = currentUser.getId();
-                int mapelId = getMapelIdForGuru(userId);
-                if (mapelId == -1) {
-                    JOptionPane.showMessageDialog(mainMenuView, "Tidak ada mata pelajaran yang terkait dengan guru ini!", "Error", JOptionPane.ERROR_MESSAGE);
-                    LOGGER.severe("Tidak ada mapel_id untuk guru_id=" + userId);
-                    return;
-                }
-
-                InputNilaiView inputNilaiView = new InputNilaiView();
-                inputNilaiView.setMainController(this);
-                NilaiModel nilaiModel = new NilaiModel(Koneksi.getConnection());
-                nilaiController = new NilaiController(inputNilaiView, nilaiModel, this);
-                inputNilaiView.setController(nilaiController);
-                if (lastSelectedKelas != null) {
-                    nilaiController.setLastSelectedKelas(lastSelectedKelas);
-                }
+    SwingUtilities.invokeLater(() -> {
+        try {
+            if (nilaiController != null && nilaiController.getLastSelectedKelas() != null) {
+                lastSelectedKelas = nilaiController.getLastSelectedKelas();
+                lastSelectedSemester = nilaiController.getLastSelectedSemester();
+                LOGGER.info("lastSelectedKelas dan lastSelectedSemester diperbarui dari NilaiController: " + lastSelectedKelas + ", " + lastSelectedSemester);
+            }
+            
+            WaliKelasView waliKelasView = new WaliKelasView();
+            WaliKelasModel waliKelasModel = new WaliKelasModel();
+            waliKelasController = new WaliKelasController(waliKelasView, waliKelasModel, this);
+            
+            if (waliKelasView == null || waliKelasModel == null || waliKelasController == null) {
+                throw new RuntimeException("Gagal menginisialisasi komponen Wali Kelas: null reference detected");
+            }
+            
+            waliKelasView.setController(waliKelasController);
+            waliKelasView.setMainController(this);
+            
+            if (lastSelectedKelas != null) {
+                waliKelasView.getComboKelas().setSelectedItem(lastSelectedKelas);
                 if (lastSelectedSemester != null) {
-                    nilaiController.setLastSelectedSemester(lastSelectedSemester); // Pass semester
+                    waliKelasView.getComboSemester().setSelectedItem("Semester " + lastSelectedSemester);
                 }
-                inputNilaiView.setVisible(true);
-                nilaiController.loadDataAwal();
-                LOGGER.info("Membuka modul Input Nilai untuk guru_id=" + userId + ", mapel_id=" + mapelId + ", kelas=" + lastSelectedKelas + ", semester=" + lastSelectedSemester);
-            } catch (Exception e) {
-                JOptionPane.showMessageDialog(mainMenuView, "Gagal membuka fitur Input Nilai: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-                LOGGER.severe("Gagal membuka Input Nilai: " + e.getMessage());
+                LOGGER.info("lastSelectedKelas dan lastSelectedSemester diterapkan ke WaliKelasView: " + lastSelectedKelas + ", " + lastSelectedSemester);
             }
-        });
-    }
-
-    public void openWaliKelasModule() {
-        if (currentUser == null || !currentUser.getRole().equals("guru")) {
-            JOptionPane.showMessageDialog(mainMenuView, "Hanya guru yang dapat mengakses fitur Wali Kelas!", "Peringatan", JOptionPane.WARNING_MESSAGE);
-            LOGGER.warning("Akses Wali Kelas ditolak: user=" + (currentUser != null ? currentUser.getRole() : "null"));
-            return;
+            
+            mainMenuView.setVisible(false); // Sembunyikan, bukan dispose
+            waliKelasView.setVisible(true);
+            waliKelasController.loadDataAwal();
+            LOGGER.info("Modul Wali Kelas dibuka untuk user: " + currentUser.getNama());
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(mainMenuView, "Gagal membuka fitur Wali Kelas: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            if (mainMenuView != null) {
+                mainMenuView.setVisible(true); // Tampilkan kembali jika error
+            }
+            LOGGER.severe("Gagal membuka Wali Kelas: " + e.getMessage());
         }
-
-        SwingUtilities.invokeLater(() -> {
-            try {
-                if (nilaiController != null && nilaiController.getLastSelectedKelas() != null) {
-                    lastSelectedKelas = nilaiController.getLastSelectedKelas();
-                    lastSelectedSemester = nilaiController.getLastSelectedSemester(); // Update semester
-                    LOGGER.info("lastSelectedKelas dan lastSelectedSemester diperbarui dari NilaiController: " + lastSelectedKelas + ", " + lastSelectedSemester);
-                }
-                
-                WaliKelasView waliKelasView = new WaliKelasView();
-                WaliKelasModel waliKelasModel = new WaliKelasModel();
-                waliKelasController = new WaliKelasController(waliKelasView, waliKelasModel, this);
-                
-                if (waliKelasView == null || waliKelasModel == null || waliKelasController == null) {
-                    throw new RuntimeException("Gagal menginisialisasi komponen Wali Kelas: null reference detected");
-                }
-                
-                waliKelasView.setController(waliKelasController);
-                waliKelasView.setMainController(this);
-                
-                if (lastSelectedKelas != null) {
-                    waliKelasView.getComboKelas().setSelectedItem(lastSelectedKelas);
-                    if (lastSelectedSemester != null) {
-                        waliKelasView.getComboSemester().setSelectedItem("Semester " + lastSelectedSemester);
-                    }
-                    LOGGER.info("lastSelectedKelas dan lastSelectedSemester diterapkan ke WaliKelasView: " + lastSelectedKelas + ", " + lastSelectedSemester);
-                }
-                
-                waliKelasView.setVisible(true);
-                waliKelasController.loadDataAwal();
-                LOGGER.info("Modul Wali Kelas dibuka untuk user: " + currentUser.getNama());
-            } catch (Exception e) {
-                JOptionPane.showMessageDialog(mainMenuView, "Gagal membuka fitur Wali Kelas: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-                LOGGER.severe("Gagal membuka Wali Kelas: " + e.getMessage());
-            }
-        });
-    }
+    });
+}
 
     public int getMapelIdForGuru(int guruId) {
         Connection conn = Koneksi.getConnection();
@@ -409,6 +416,25 @@ public class MainController {
     public User getCurrentUser() {
         return currentUser;
     }
+    public void showMainMenu() {
+    SwingUtilities.invokeLater(() -> {
+        try {
+            if (mainMenuView == null || !mainMenuView.isDisplayable()) {
+                mainMenuView = new MainMenuView(currentUser);
+                setupMainMenuActions();
+                LOGGER.info("MainMenuView dibuat ulang untuk user: " + currentUser.getNama());
+            }
+            mainMenuView.setVisible(true);
+            mainMenuView.toFront();
+            LOGGER.info("MainMenuView ditampilkan kembali");
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Gagal menampilkan MainMenuView", e);
+            JOptionPane.showMessageDialog(null,
+                "Gagal membuka menu utama: " + e.getMessage(),
+                "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    });
+}
 
     public void setWaliKelasController(WaliKelasController controller) {
         this.waliKelasController = controller;
