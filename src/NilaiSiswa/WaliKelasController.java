@@ -28,12 +28,14 @@ public class WaliKelasController {
     private boolean isFirstLoad = true;
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
     private final MainController mainController;
+    private int mapelId; // Tambahkan field mapelId
 
     public WaliKelasController(WaliKelasView view, WaliKelasModel model, MainController mainController) {
         this.view = view;
         this.model = model;
         this.mainController = mainController;
         if (mainController != null) {
+            this.mapelId = mainController.getMapelIdForGuru(mainController.getCurrentUser().getId()); // Inisialisasi mapelId
             mainController.setWaliKelasController(this);
         }
         initController();
@@ -67,35 +69,35 @@ public class WaliKelasController {
         startAutoRefresh();
     }
 
-private void loadKelas() {
-    List<Map<String, Object>> daftarKelas = model.getDaftarKelas();
-    DefaultComboBoxModel<String> comboModel = new DefaultComboBoxModel<>();
-    for (Map<String, Object> kelas : daftarKelas) {
-        comboModel.addElement((String) kelas.get("nama_kelas"));
-    }
-    String[] kelasArray = new String[comboModel.getSize()];
-    for (int i = 0; i < comboModel.getSize(); i++) {
-        kelasArray[i] = comboModel.getElementAt(i);
-    }
-    view.setKelasList(kelasArray);
-    if (comboModel.getSize() > 0) {
-        String lastSelectedKelas = mainController.getLastSelectedKelas();
-        if (lastSelectedKelas != null) {
-            view.getComboKelas().setSelectedItem(lastSelectedKelas);
+    private void loadKelas() {
+        List<Map<String, Object>> daftarKelas = model.getDaftarKelas();
+        DefaultComboBoxModel<String> comboModel = new DefaultComboBoxModel<>();
+        for (Map<String, Object> kelas : daftarKelas) {
+            comboModel.addElement((String) kelas.get("nama_kelas"));
+        }
+        String[] kelasArray = new String[comboModel.getSize()];
+        for (int i = 0; i < comboModel.getSize(); i++) {
+            kelasArray[i] = comboModel.getElementAt(i);
+        }
+        view.setKelasList(kelasArray);
+        if (comboModel.getSize() > 0) {
+            String lastSelectedKelas = mainController.getLastSelectedKelas();
+            if (lastSelectedKelas != null) {
+                view.getComboKelas().setSelectedItem(lastSelectedKelas);
+            } else {
+                view.getComboKelas().setSelectedIndex(0);
+            }
+            String lastSelectedSemester = mainController.getLastSelectedSemester();
+            if (lastSelectedSemester != null) {
+                view.getComboSemester().setSelectedItem("Semester " + lastSelectedSemester);
+            }
+            updateKelasInfo();
+            tampilkanData();
         } else {
-            view.getComboKelas().setSelectedIndex(0);
+            view.setStatusMessage("Tidak ada kelas tersedia");
+            JOptionPane.showMessageDialog(view, "Tidak ada kelas tersedia!", "Peringatan", JOptionPane.WARNING_MESSAGE);
         }
-        String lastSelectedSemester = mainController.getLastSelectedSemester();
-        if (lastSelectedSemester != null) {
-            view.getComboSemester().setSelectedItem("Semester " + lastSelectedSemester);
-        }
-        updateKelasInfo();
-        tampilkanData();
-    } else {
-        view.setStatusMessage("Tidak ada kelas tersedia");
-        JOptionPane.showMessageDialog(view, "Tidak ada kelas tersedia!", "Peringatan", JOptionPane.WARNING_MESSAGE);
     }
-}
 
     private void updateKelasInfo() {
         String namaKelas = (String) view.getComboKelas().getSelectedItem();
@@ -122,7 +124,7 @@ private void loadKelas() {
         }
 
         String semester = ((String) view.getComboSemester().getSelectedItem()).replace("Semester ", "");
-        List<Map<String, Object>> data = model.getRekapNilaiDanAbsensi(kelasId, semester);
+        List<Map<String, Object>> data = model.getRekapNilaiDanAbsensi(kelasId, semester, mapelId); // Gunakan field mapelId
 
         DefaultTableModel tableModel = view.getTableModel();
         tableModel.setRowCount(0);
@@ -171,7 +173,7 @@ private void loadKelas() {
         }
 
         int kelasId = model.getKelasIdByNama(namaKelas);
-        List<Map<String, Object>> data = model.getRekapNilaiDanAbsensi(kelasId, semester);
+        List<Map<String, Object>> data = model.getRekapNilaiDanAbsensi(kelasId, semester, mapelId); // Gunakan field mapelId
         if (data.isEmpty()) {
             JOptionPane.showMessageDialog(view, "Tidak ada data untuk diekspor!", "Peringatan", JOptionPane.WARNING_MESSAGE);
             LOGGER.warning("Data kosong untuk kelas: " + namaKelas + ", semester: " + semester);
@@ -211,7 +213,7 @@ private void loadKelas() {
                 java.net.URL leftImgURL = getClass().getResource("/shared/Asset/Lambang_Kabupaten_Pringsewu.png");
                 if (leftImgURL != null) {
                     Image leftLogo = Image.getInstance(leftImgURL);
-                    leftLogo.scaleToFit(100, 50);
+                    leftLogo.scaleToFit(200, 100);
                     leftLogo.setAlignment(Element.ALIGN_LEFT);
                     leftImageCell.addElement(leftLogo);
                 } else {
@@ -239,10 +241,10 @@ private void loadKelas() {
             PdfPCell rightImageCell = new PdfPCell();
             rightImageCell.setBorder(Rectangle.NO_BORDER);
             try {
-                java.net.URL rightImgURL = getClass().getResource("/shared/Asset/logo_smp.jpg");
+                java.net.URL rightImgURL = getClass().getResource("/shared/Asset/logo smp.jpg");
                 if (rightImgURL != null) {
                     Image rightLogo = Image.getInstance(rightImgURL);
-                    rightLogo.scaleToFit(100, 50);
+                    rightLogo.scaleToFit(200, 100);
                     rightLogo.setAlignment(Element.ALIGN_RIGHT);
                     rightImageCell.addElement(rightLogo);
                 } else {
@@ -357,7 +359,7 @@ private void loadKelas() {
                 java.net.URL leftImgURL = getClass().getResource("/shared/Asset/Lambang_Kabupaten_Pringsewu.png");
                 if (leftImgURL != null) {
                     Image leftLogo = Image.getInstance(leftImgURL);
-                    leftLogo.scaleToFit(100, 50);
+                    leftLogo.scaleToFit(200, 100);
                     leftLogo.setAlignment(Element.ALIGN_LEFT);
                     leftImageCell.addElement(leftLogo);
                 }
@@ -382,10 +384,10 @@ private void loadKelas() {
             PdfPCell rightImageCell = new PdfPCell();
             rightImageCell.setBorder(Rectangle.NO_BORDER);
             try {
-                java.net.URL rightImgURL = getClass().getResource("/shared/Asset/logo_smp.jpg");
+                java.net.URL rightImgURL = getClass().getResource("/shared/Asset/logo smp.jpg");
                 if (rightImgURL != null) {
                     Image rightLogo = Image.getInstance(rightImgURL);
-                    rightLogo.scaleToFit(100, 50);
+                    rightLogo.scaleToFit(200, 100);
                     rightLogo.setAlignment(Element.ALIGN_RIGHT);
                     rightImageCell.addElement(rightLogo);
                 }
@@ -412,7 +414,7 @@ private void loadKelas() {
             document.add(info);
 
             int kelasId = model.getKelasIdByNama(namaKelas);
-            List<Map<String, Object>> data = model.getRekapNilaiDanAbsensi(kelasId, semester);
+            List<Map<String, Object>> data = model.getRekapNilaiDanAbsensi(kelasId, semester, mapelId); // Gunakan field mapelId
 
             for (Map<String, Object> siswa : data) {
                 PdfPTable table = new PdfPTable(11);
@@ -466,11 +468,19 @@ private void loadKelas() {
             mainController.setLastSelectedKelas(namaKelas);
             mainController.setLastSelectedSemester(semester);
             LOGGER.info("Menyimpan state sebelum navigasi ke InputNilai: kelas=" + namaKelas + ", semester=" + semester);
+            
+            WaliKelasController waliKelasController = this;
+            
+            view.addWindowListener(new java.awt.event.WindowAdapter() {
+                @Override
+                public void windowActivated(java.awt.event.WindowEvent e) {
+                    waliKelasController.tampilkanData();
+                    LOGGER.info("WaliKelasView diaktifkan kembali, memuat ulang data");
+                }
+            });
+            
             mainController.openNilaiSiswaModule();
             view.setVisible(false);
-        } else {
-            JOptionPane.showMessageDialog(view, "Gagal membuka modul Input Nilai: MainController tidak tersedia", "Error", JOptionPane.ERROR_MESSAGE);
-            LOGGER.severe("MainController null saat membuka InputNilai");
         }
     }
 
@@ -494,7 +504,7 @@ private void loadKelas() {
         String semester = ((String) view.getComboSemester().getSelectedItem()).replace("Semester ", "");
         if (namaKelas != null && semester != null) {
             int kelasId = model.getKelasIdByNama(namaKelas);
-            if (kelasId != -1 && model.checkForUpdates(kelasId, semester)) {
+            if (kelasId != -1 && model.checkForUpdates(kelasId, semester, mapelId)) { // Tambahkan mapelId
                 tampilkanData();
                 view.setStatusMessage("Data diperbarui: " + new Date());
                 LOGGER.info("Data diperbarui untuk kelas: " + namaKelas + ", semester: " + semester);
