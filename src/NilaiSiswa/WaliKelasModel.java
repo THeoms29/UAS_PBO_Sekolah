@@ -52,7 +52,7 @@ public class WaliKelasModel {
         return -1;
     }
 
-    public List<Map<String, Object>> getRekapNilaiDanAbsensi(int kelasId, String semester) {
+    public List<Map<String, Object>> getRekapNilaiDanAbsensi(int kelasId, String semester, int mapelId) {
         List<Map<String, Object>> list = new ArrayList<>();
         String sqlSiswa = "SELECT id, nama, nis FROM siswa WHERE kelas_id = ?";
         try (PreparedStatement psSiswa = conn.prepareStatement(sqlSiswa)) {
@@ -67,31 +67,30 @@ public class WaliKelasModel {
 
                 int siswaId = rsSiswa.getInt("id");
                 String sqlNilai = """
-                    SELECT 
-                        AVG(n.nilai_uh) as nilai_uh,
-                        AVG(n.nilai_uts) as nilai_uts,
-                        AVG(n.nilai_uas) as nilai_uas,
-                        AVG(n.nilai_akhir) as nilai_akhir
+                    SELECT n.nilai_uh, n.nilai_uts, n.nilai_uas, n.nilai_akhir
                     FROM nilai n
-                    JOIN mapel m ON n.mapel_id = m.id
-                    WHERE n.siswa_id = ? AND n.semester = ?
+                    WHERE n.siswa_id = ? AND n.semester = ? AND n.mapel_id = ?
+                    ORDER BY n.updated_at DESC
+                    LIMIT 1
                     """;
-                PreparedStatement psNilai = conn.prepareStatement(sqlNilai);
-                psNilai.setInt(1, siswaId);
-                psNilai.setString(2, semester);
-                ResultSet rsNilai = psNilai.executeQuery();
-
-                double nilaiUH = 0.0, nilaiUTS = 0.0, nilaiUAS = 0.0, nilaiAkhir = 0.0;
-                if (rsNilai.next()) {
-                    nilaiUH = rsNilai.getDouble("nilai_uh");
-                    nilaiUTS = rsNilai.getDouble("nilai_uts");
-                    nilaiUAS = rsNilai.getDouble("nilai_uas");
-                    nilaiAkhir = rsNilai.getDouble("nilai_akhir");
+                try (PreparedStatement psNilai = conn.prepareStatement(sqlNilai)) {
+                    psNilai.setInt(1, siswaId);
+                    psNilai.setString(2, semester);
+                    psNilai.setInt(3, mapelId);
+                    try (ResultSet rsNilai = psNilai.executeQuery()) {
+                        if (rsNilai.next()) {
+                            siswa.put("nilai_uh", rsNilai.getObject("nilai_uh") != null ? rsNilai.getInt("nilai_uh") : 0);
+                            siswa.put("nilai_uts", rsNilai.getObject("nilai_uts") != null ? rsNilai.getInt("nilai_uts") : 0);
+                            siswa.put("nilai_uas", rsNilai.getObject("nilai_uas") != null ? rsNilai.getInt("nilai_uas") : 0);
+                            siswa.put("nilai_akhir", rsNilai.getObject("nilai_akhir") != null ? rsNilai.getDouble("nilai_akhir") : 0.0);
+                        } else {
+                            siswa.put("nilai_uh", 0);
+                            siswa.put("nilai_uts", 0);
+                            siswa.put("nilai_uas", 0);
+                            siswa.put("nilai_akhir", 0.0);
+                        }
+                    }
                 }
-                siswa.put("nilai_uh", nilaiUH);
-                siswa.put("nilai_uts", nilaiUTS);
-                siswa.put("nilai_uas", nilaiUAS);
-                siswa.put("nilai_akhir", nilaiAkhir);
 
                 String sqlAbsensi = """
                     SELECT 
@@ -103,23 +102,18 @@ public class WaliKelasModel {
                     FROM absensi 
                     WHERE siswa_id = ?
                     """;
-                PreparedStatement psAbsensi = conn.prepareStatement(sqlAbsensi);
-                psAbsensi.setInt(1, siswaId);
-                ResultSet rsAbsensi = psAbsensi.executeQuery();
-
-                int totalAbsensi = 0, hadir = 0, izin = 0, sakit = 0, alfa = 0;
-                if (rsAbsensi.next()) {
-                    totalAbsensi = rsAbsensi.getInt("total_absensi");
-                    hadir = rsAbsensi.getInt("hadir");
-                    izin = rsAbsensi.getInt("izin");
-                    sakit = rsAbsensi.getInt("sakit");
-                    alfa = rsAbsensi.getInt("alfa");
+                try (PreparedStatement psAbsensi = conn.prepareStatement(sqlAbsensi)) {
+                    psAbsensi.setInt(1, siswaId);
+                    try (ResultSet rsAbsensi = psAbsensi.executeQuery()) {
+                        if (rsAbsensi.next()) {
+                            siswa.put("total_absensi", rsAbsensi.getInt("total_absensi"));
+                            siswa.put("hadir", rsAbsensi.getInt("hadir"));
+                            siswa.put("izin", rsAbsensi.getInt("izin"));
+                            siswa.put("sakit", rsAbsensi.getInt("sakit"));
+                            siswa.put("alfa", rsAbsensi.getInt("alfa"));
+                        }
+                    }
                 }
-                siswa.put("total_absensi", totalAbsensi);
-                siswa.put("hadir", hadir);
-                siswa.put("izin", izin);
-                siswa.put("sakit", sakit);
-                siswa.put("alfa", alfa);
 
                 list.add(siswa);
             }
@@ -130,34 +124,35 @@ public class WaliKelasModel {
         return list;
     }
 
-public boolean checkForUpdates(int kelasId, String semester) {
-    String sql = """
-        SELECT MAX(last_updated) AS last_update
-        FROM (
-            SELECT MAX(updated_at) AS last_updated FROM nilai 
-            WHERE siswa_id IN (SELECT id FROM siswa WHERE kelas_id = ?) AND semester = ?
-            UNION ALL
-            SELECT MAX(updated_at) AS last_updated FROM absensi 
-            WHERE siswa_id IN (SELECT id FROM siswa WHERE kelas_id = ?)
-        ) AS combined
-    """;
-    try (PreparedStatement ps = conn.prepareStatement(sql)) {
-        ps.setInt(1, kelasId);
-        ps.setString(2, semester);
-        ps.setInt(3, kelasId);
-        ResultSet rs = ps.executeQuery();
-        if (rs.next()) {
-            Timestamp lastUpdate = rs.getTimestamp("last_update");
-            long currentTimestamp = lastUpdate != null ? lastUpdate.getTime() : 0; // Gunakan 0 jika null
-            if (currentTimestamp > lastUpdateTimestamp || lastUpdateTimestamp == 0) { // Perbarui jika timestamp baru lebih besar atau belum diinisialisasi
-                lastUpdateTimestamp = currentTimestamp;
-                return true;
+    public boolean checkForUpdates(int kelasId, String semester, int mapelId) {
+        String sql = """
+            SELECT MAX(last_updated) AS last_update
+            FROM (
+                SELECT MAX(updated_at) AS last_updated FROM nilai 
+                WHERE siswa_id IN (SELECT id FROM siswa WHERE kelas_id = ?) AND semester = ? AND mapel_id = ?
+                UNION ALL
+                SELECT MAX(updated_at) AS last_updated FROM absensi 
+                WHERE siswa_id IN (SELECT id FROM siswa WHERE kelas_id = ?)
+            ) AS combined
+        """;
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, kelasId);
+            ps.setString(2, semester);
+            ps.setInt(3, mapelId);
+            ps.setInt(4, kelasId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                Timestamp lastUpdate = rs.getTimestamp("last_update");
+                if (lastUpdate != null && lastUpdate.getTime() > lastUpdateTimestamp) {
+                    lastUpdateTimestamp = lastUpdate.getTime();
+                    return true;
+                }
             }
+            return false;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "Gagal memeriksa pembaruan: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            return false;
         }
-    } catch (SQLException e) {
-        e.printStackTrace();
-        JOptionPane.showMessageDialog(null, "Gagal memeriksa pembaruan: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
     }
-    return false;
-}
 }
