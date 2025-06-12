@@ -63,11 +63,35 @@ public class WaliKelasView extends JFrame {
         }
     }
 
-    private void initUI() {
-        setTitle("Aplikasi Rekap Nilai & Absensi - Wali Kelas");
-        setSize(1250, 750);
-        setLocationRelativeTo(null);
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+   private void initUI() {
+    setTitle("Aplikasi Rekap Nilai & Absensi - Wali Kelas");
+    setSize(1250, 750);
+    setLocationRelativeTo(null);
+    setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+    addWindowListener(new java.awt.event.WindowAdapter() {
+        @Override
+        public void windowClosing(java.awt.event.WindowEvent e) {
+            if (mainController != null) {
+                mainController.showMainMenu();
+                LOGGER.info("WaliKelasView ditutup, kembali ke MainMenuView");
+            }
+            if (controller != null) {
+                controller.shutdownScheduler(); // Pastikan scheduler dimatikan
+            }
+            dispose();
+        }
+    });
+
+    // Tambahkan ComponentListener untuk memuat ulang data saat view terlihat
+    addComponentListener(new java.awt.event.ComponentAdapter() {
+        @Override
+        public void componentShown(java.awt.event.ComponentEvent e) {
+            if (controller != null) {
+                controller.tampilkanData();
+                LOGGER.info("WaliKelasView ditampilkan, memuat ulang data");
+            }
+        }
+    });
 
         JPanel mainPanel = new JPanel(new BorderLayout(10, 10)) {
             @Override
