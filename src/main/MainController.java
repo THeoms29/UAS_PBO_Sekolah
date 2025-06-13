@@ -11,18 +11,13 @@ import javax.swing.*;
 
 import login.LoginModel;
 import login.LoginView;
-import peminjaman.PeminjamanController;
-import peminjaman.PeminjamanModel;
-import peminjaman.PeminjamanView;
+import peminjaman.*;
 import absensi.*;
 import inventaris.*;
 import jadwal.*;
-import NilaiSiswa.InputNilaiView;
-import NilaiSiswa.NilaiController;
-import NilaiSiswa.NilaiModel;
-import NilaiSiswa.WaliKelasController;
-import NilaiSiswa.WaliKelasModel;
-import NilaiSiswa.WaliKelasView;
+import NilaiSiswa.*;
+import registrasi.*;
+import manajemenuser.*;
 import login.LoginModel.User;
 import shared.Koneksi;
 
@@ -45,17 +40,37 @@ public class MainController {
     private void initializeLogin() {
         try {
             loginModel = new LoginModel();
-            loginView = new LoginView();
-            setupLoginActions();
-            loginView.setVisible(true);
-            loginView.focusUsername();
+            int userCount = loginModel.getUserCount();
+    
+            if (userCount == 0) {
+                LOGGER.info("Database user kosong. Memulai mode registrasi admin pertama.");
+                showFirstUserRegistration();
+            } else if (userCount > 0) {
+                loginView = new LoginView();
+                setupLoginActions();
+                loginView.setVisible(true);
+                loginView.focusUsername();
+            } else {
+                JOptionPane.showMessageDialog(null, "Tidak dapat terhubung atau memverifikasi database.", "Error Kritis", JOptionPane.ERROR_MESSAGE);
+                System.exit(1);
+            }
+    
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Gagal menginisialisasi login", e);
-            JOptionPane.showMessageDialog(null, 
-                "Gagal menginisialisasi aplikasi: " + e.getMessage(),
-                "Error", JOptionPane.ERROR_MESSAGE);
+            LOGGER.log(Level.SEVERE, "Gagal menginisialisasi aplikasi", e);
+            JOptionPane.showMessageDialog(null, "Gagal menginisialisasi aplikasi: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             System.exit(1);
         }
+    }
+
+    private void showFirstUserRegistration() {
+        RegistrasiAdminView regView = new RegistrasiAdminView();
+        RegistrasiAdminModel regModel = new RegistrasiAdminModel();
+        new RegistrasiAdminController(regView, regModel, this); 
+        regView.setVisible(true);
+    }
+
+    public void onFirstUserRegistered() {
+        initializeLogin();
     }
 
     private void setupLoginActions() {
@@ -125,6 +140,7 @@ public class MainController {
         mainMenuView.setPeminjamanBukuAction(e -> openPeminjamanBukuModule());
         mainMenuView.setInventarisAction(e -> openInventarisModule());
         mainMenuView.setLogoutAction(e -> handleLogout());
+        mainMenuView.setManajemenUserAction(e -> openUserManagementModule());
     }
 
     private void openAbsensiModule() {
@@ -464,6 +480,21 @@ public void openWaliKelasModule() {
 
     public String getLastSelectedSemester() {
         return lastSelectedSemester;
+    }
+
+    private void openUserManagementModule() {
+        if (!"kepala_sekolah".equals(currentUser.getRole())) {
+            JOptionPane.showMessageDialog(mainMenuView, "Anda tidak memiliki hak akses untuk fitur ini.", "Akses Ditolak", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        UserManajemenView userView = new UserManajemenView();
+        UserManajemenModel userModel = new UserManajemenModel();
+        new UserManajemenController(userView, userModel);
+        
+        userView.setLocationRelativeTo(mainMenuView); // Tampilkan di tengah menu utama
+        userView.setVisible(true);
+        LOGGER.info("Modul Manajemen User dibuka oleh: " + currentUser.getNama());
     }
 
     public static void main(String[] args) {

@@ -44,7 +44,20 @@ public class LoginModel {
         return null;
     }
 
-    // Method untuk mengecek koneksi database
+    public int getUserCount() {
+        String sql = "SELECT COUNT(*) FROM users";
+        try (PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Gagal menghitung jumlah user", e);
+        }
+        return -1; // Mengindikasikan error
+    }
+
+    // untuk mengecek koneksi database
     public boolean isConnectionValid() {
         try {
             return conn != null && !conn.isClosed();

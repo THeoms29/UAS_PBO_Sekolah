@@ -26,6 +26,7 @@ public class MainMenuView extends JFrame {
     public JButton btnPeminjamanBuku;
     public JButton btnInventaris;
     public JButton btnLogout;
+    public JButton btnManajemenUser;
     
     // Label informasi user
     public JLabel userInfoLabel;
@@ -151,14 +152,35 @@ public class MainMenuView extends JFrame {
         btnInventaris = createMenuButton("Inventaris", "📦", new Color(52, 73, 94));
         menuPanel.add(btnInventaris, gbc);
 
-        // Tombol logout di pojok kanan bawah
-        gbc.gridx = 2; gbc.gridy = 1;
-        gbc.weighty = 0.5;
+        // Tombol Manajemen User dan Logout berdampingan jika user adalah kepala sekolah
+        JPanel bottomButtonPanel = new JPanel(new GridLayout(1, 2, 15, 0)); 
+        bottomButtonPanel.setOpaque(false); // Transparan
+
+        btnManajemenUser = createMenuButton("Manajemen User", "👥", new Color(112, 128, 144));
         btnLogout = createMenuButton("Logout", "🚪", new Color(231, 76, 60));
-        btnLogout.setPreferredSize(new Dimension(150, 80));
-        menuPanel.add(btnLogout, gbc);
+
+        gbc.gridx = 2; gbc.gridy = 1;
+        menuPanel.add(createBottomRightPanel(), gbc);
 
         return menuPanel;
+    }
+
+    private JPanel createBottomRightPanel() {
+        JPanel panel = new JPanel(new GridLayout(1, 2, 15, 0));
+        panel.setOpaque(false);
+
+        btnManajemenUser = createMenuButton("Manajemen User", "👥", new Color(112, 128, 144));
+        btnLogout = createMenuButton("Logout", "🚪", new Color(231, 76, 60));
+
+        // Hanya tampilkan tombol Manajemen User jika role adalah kepala_sekolah
+        if (currentUser != null && "kepala_sekolah".equals(currentUser.getRole())) {
+            panel.add(btnManajemenUser);
+        } else {
+            // Tambahkan komponen kosong agar tombol Logout tetap di posisi yang sama
+            panel.add(new JLabel("")); 
+        }
+        panel.add(btnLogout);
+        return panel;
     }
 
     private JButton createMenuButton(String text, String icon, Color backgroundColor) {
@@ -262,6 +284,12 @@ public class MainMenuView extends JFrame {
 
     public void setLogoutAction(java.awt.event.ActionListener action) {
         btnLogout.addActionListener(action);
+    }
+
+    public void setManajemenUserAction(java.awt.event.ActionListener action) {
+        if (btnManajemenUser != null) {
+            btnManajemenUser.addActionListener(action);
+        }
     }
 
     public User getCurrentUser() {
