@@ -47,6 +47,17 @@ public class JadwalModel {
         }
         return list;
     }
+    
+    public void tambahMapel(String namaMapel) {
+    try {
+        String sql = "INSERT INTO mapel (nama_mapel) VALUES (?)";
+        PreparedStatement stmt = conn.prepareStatement(sql);
+        stmt.setString(1, namaMapel);
+        stmt.executeUpdate();
+    } catch (SQLException e) {
+        System.out.println("Gagal menambah mapel: " + e.getMessage());
+    }
+    }
 
     public boolean isBentrok(String hari, int jamKe, int kelasId, int guruId) throws SQLException {
         String sql = "SELECT COUNT(*) FROM jadwal WHERE hari = ? AND jam_ke = ? AND (kelas_id = ? OR guru_id = ?)";

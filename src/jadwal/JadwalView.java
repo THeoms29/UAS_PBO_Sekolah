@@ -10,10 +10,14 @@ public class JadwalView extends JFrame {
     public JComboBox<String> comboKelas, comboMapel, comboGuru, comboHari;
     public JComboBox<String> cbFilterKelas, cbFilterGuru;
     public JTextField fieldJamKe;
+    public JTextField txtTambahMapel;
     public JButton btnSimpan, btnExportPDF, btnImporCSV, btnTambahMapel;
     public JButton btnExportCSV, btnDownloadTemplate;
     public JTable tableJadwal;
     public DefaultTableModel modelTabel;
+
+    private JComboBox<String> comboJamMulai, comboJamSelesai;
+    private JPanel panelWaktu;
 
     public JadwalView() {
         setTitle("Jadwal Pelajaran");
@@ -100,6 +104,52 @@ public class JadwalView extends JFrame {
         tableJadwal.getColumnModel().getColumn(2).setPreferredWidth(100); // Kelas
         tableJadwal.getColumnModel().getColumn(3).setPreferredWidth(150); // Mapel
         tableJadwal.getColumnModel().getColumn(4).setPreferredWidth(150); // Guru
+    }
+
+    private void initializeTimeComboBoxes() {
+        // Combo box untuk jam mulai
+        comboJamMulai = new JComboBox<>();
+        comboJamSelesai = new JComboBox<>();
+        
+        // Isi dengan waktu dari 06:00 sampai 17:00
+        for (int hour = 6; hour <= 17; hour++) {
+            for (int minute = 0; minute < 60; minute += 30) { // Interval 30 menit
+                String time = String.format("%02d.%02d", hour, minute);
+                comboJamMulai.addItem(time);
+                comboJamSelesai.addItem(time);
+            }
+        }
+        
+        // Set default values
+        comboJamMulai.setSelectedItem("06.30");
+        comboJamSelesai.setSelectedItem("07.00");
+        
+        Dimension timeComboSize = new Dimension(80, 25);
+        comboJamMulai.setPreferredSize(timeComboSize);
+        comboJamSelesai.setPreferredSize(timeComboSize);
+        
+        // Listener untuk update fieldJamKe otomatis
+        ActionListener timeUpdateListener = e -> updateJamKeField();
+        comboJamMulai.addActionListener(timeUpdateListener);
+        comboJamSelesai.addActionListener(timeUpdateListener);
+        
+        // Panel untuk menggabungkan kedua combo box
+        panelWaktu = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        panelWaktu.add(comboJamMulai);
+        panelWaktu.add(new JLabel(" - "));
+        panelWaktu.add(comboJamSelesai);
+        panelWaktu.setPreferredSize(new Dimension(200, 25));
+        
+        // Update field jam ke saat inisialisasi
+        updateJamKeField();
+    }
+
+     private void updateJamKeField() {
+        String jamMulai = (String) comboJamMulai.getSelectedItem();
+        String jamSelesai = (String) comboJamSelesai.getSelectedItem();
+        if (jamMulai != null && jamSelesai != null) {
+            fieldJamKe.setText(jamMulai + "-" + jamSelesai);
+        }
     }
     
     private void setupLayout() {
@@ -219,11 +269,20 @@ public class JadwalView extends JFrame {
         
         // Row 5: Jam Ke
         gbc.gridx = 0; gbc.gridy = 4; gbc.anchor = GridBagConstraints.WEST; gbc.fill = GridBagConstraints.NONE; gbc.weightx = 0;
-        formPanel.add(new JLabel("Jam Ke:"), gbc);
-        
+        formPanel.add(new JLabel("Waktu:"), gbc);
+
         gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL; gbc.weightx = 1.0;
         formPanel.add(fieldJamKe, gbc);
+
+        // Row 6: Tambah Mapel
+        gbc.gridx = 0; gbc.gridy = 5; gbc.anchor = GridBagConstraints.WEST; gbc.fill = GridBagConstraints.NONE; gbc.weightx = 0;
+        formPanel.add(new JLabel("Tambah Mapel:"), gbc);
         
+        gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL; gbc.weightx = 1.0;
+        txtTambahMapel = new JTextField();
+        txtTambahMapel.setPreferredSize(new Dimension(200, 25));
+        formPanel.add(txtTambahMapel, gbc);
+
         return formPanel;
     }
     
@@ -275,6 +334,22 @@ public class JadwalView extends JFrame {
         tablePanel.add(scrollPane, BorderLayout.CENTER);
         
         return tablePanel;
+    }
+
+     public String getSelectedJamMulai() {
+        return (String) comboJamMulai.getSelectedItem();
+    }
+    
+    public String getSelectedJamSelesai() {
+        return (String) comboJamSelesai.getSelectedItem();
+    }
+    
+    public void setSelectedJamMulai(String jam) {
+        comboJamMulai.setSelectedItem(jam);
+    }
+    
+    public void setSelectedJamSelesai(String jam) {
+        comboJamSelesai.setSelectedItem(jam);
     }
 
     // Aksi - Method setter untuk action listeners
@@ -333,6 +408,10 @@ public class JadwalView extends JFrame {
 
     public JTextField getFieldJamKe() {
         return fieldJamKe;
+    }
+
+    public JTextField getTxtTambahMapel() {
+        return txtTambahMapel;
     }
 
     public JTable getTableJadwal() {

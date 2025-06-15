@@ -29,29 +29,45 @@ public class JadwalController {
     try {
         view.getCbKelas().removeAllItems();
         view.cbFilterKelas.removeAllItems();
-        List<String[]> kelasList = model.getAllKelas();
-        for (String[] k : kelasList) {
-            view.getCbKelas().addItem(k[0] + ". " + k[1]);
-            view.cbFilterKelas.addItem(k[0] + ". " + k[1]);
-        }
-
         view.getCbMapel().removeAllItems();
-        List<String[]> mapelList = model.getAllMapel();
-        for (String[] m : mapelList) {
-            view.getCbMapel().addItem(m[0] + ". " + m[1]);
-        }
-
         view.getCbGuru().removeAllItems();
         view.cbFilterGuru.removeAllItems();
+        
+        // Load data kelas
+        List<String[]> kelasList = model.getAllKelas();
+        for (String[] k : kelasList) {
+            String kelasItem = k[0] + ". " + k[1];
+            view.getCbKelas().addItem(kelasItem);
+            view.cbFilterKelas.addItem(kelasItem);
+        }
+
+        // Load data mata pelajaran
+        List<String[]> mapelList = model.getAllMapel();
+        for (String[] m : mapelList) {
+            String mapelItem = m[0] + ". " + m[1];
+            view.getCbMapel().addItem(mapelItem);
+        }
+
+        // Load data guru
         List<String[]> guruList = model.getAllGuru();
         for (String[] g : guruList) {
-            view.getCbGuru().addItem(g[0] + ". " + g[1]);
-            view.cbFilterGuru.addItem(g[0] + ". " + g[1]);
+            String guruItem = g[0] + ". " + g[1];
+            view.getCbGuru().addItem(guruItem);
+            view.cbFilterGuru.addItem(guruItem);
         }
+        
+        // Set default selection jika ada data
+        if (view.cbFilterKelas.getItemCount() > 0) {
+            view.cbFilterKelas.setSelectedIndex(0);
+        }
+        
     } catch (Exception e) {
-        JOptionPane.showMessageDialog(view, "Gagal memuat data: " + e.getMessage());
+        JOptionPane.showMessageDialog(view, 
+            "Gagal memuat data: " + e.getMessage(), 
+            "Error", 
+            JOptionPane.ERROR_MESSAGE);
     }
-}
+    }
 
 
     private void addListeners() {
@@ -71,12 +87,30 @@ public class JadwalController {
         view.btnExportPDF.addActionListener(e -> eksporPDF());
         view.btnImporCSV.addActionListener(e -> imporCSV());
         view.btnDownloadTemplate.addActionListener(e -> downloadTemplate());
+        view.btnTambahMapel.addActionListener(e -> tambahMapel());
+        
     }
 
     private void simpanJadwal() {
         try {
             String hari = (String) view.getCbHari().getSelectedItem();
-            int jam = Integer.parseInt( view.getFieldJamKe().getText());
+            
+            // Ambil waktu dari field yang sudah diformat
+            String waktuLengkap = view.getFieldJamKe().getText(); // Format: "06.30-07.00"
+            
+            // Validasi format waktu
+            if (waktuLengkap == null || waktuLengkap.trim().isEmpty() || !waktuLengkap.contains("-")) {
+                JOptionPane.showMessageDialog(view, "Format waktu tidak valid! Gunakan format HH.MM-HH.MM");
+                return;
+            }
+            
+            // Parse waktu untuk mendapatkan jam ke (ini untuk kompatibilitas dengan database)
+            int jam = convertTimeToJamKe(waktuLengkap);
+            if (jam == -1) {
+                JOptionPane.showMessageDialog(view, "Gagal mengkonversi waktu. Pastikan format benar!");
+                return;
+            }
+            
             int kelasId = Integer.parseInt(view.getCbKelas().getSelectedItem().toString().split("\\. ")[0]);
             int mapelId = Integer.parseInt(view.getCbMapel().getSelectedItem().toString().split("\\. ")[0]);
             int guruId = Integer.parseInt(view.getCbGuru().getSelectedItem().toString().split("\\. ")[0]);
@@ -86,6 +120,7 @@ public class JadwalController {
                 return;
             }
 
+            // Simpan dengan waktu lengkap jika database mendukung, atau tetap pakai jam ke
             model.insertJadwal(hari, jam, kelasId, mapelId, guruId);
             JOptionPane.showMessageDialog(view, "Jadwal berhasil disimpan.");
             tampilkanJadwal("kelas");
@@ -94,31 +129,229 @@ public class JadwalController {
         }
     }
 
-    private void tampilkanJadwal(String mode) {
-        try {
-            DefaultTableModel tbl = (DefaultTableModel) view.tableJadwal.getModel();
-            tbl.setRowCount(0);
-            List<String[]> data;
+    private int convertTimeToJamKe(String waktuLengkap) {
+         try {
+        if (waktuLengkap == null || waktuLengkap.trim().isEmpty()) {
+            return -1;
+        }
+        
+        String[] waktuSplit = waktuLengkap.split("-");
+        if (waktuSplit.length != 2) return -1;
+        
+        String jamMulai = waktuSplit[0].trim();
+        String[] jamMulaiSplit = jamMulai.split("\\.");
+        
+        if (jamMulaiSplit.length != 2) return -1;
+        
+        int hour = Integer.parseInt(jamMulaiSplit[0]);
+        int minute = Integer.parseInt(jamMulaiSplit[1]);
+        
+        // Validasi jam dan menit
+        if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+            return -1;
+        }
+        
+        // Konversi ke total menit dari tengah malam
+        int totalMinutes = (hour * 60) + minute;
+        int startMinutes = (6 * 60) + 30; // 06.30 = jam ke-1
+        
+        // Hitung jam ke berdasarkan selisih waktu
+        if (totalMinutes < startMinutes) {
+            return -1; // Waktu sebelum jam pelajaran dimulai
+        }
+        
+        int jamKe = ((totalMinutes - startMinutes) / 30) + 1;
+        
+        // Validasi jam ke tidak melebihi batas wajar (misalnya max 15 jam pelajaran)
+        if (jamKe > 15) {
+            return -1;
+        }
+        
+        return jamKe;
+        
+    } catch (NumberFormatException e) {
+        return -1;
+    } catch (Exception e) {
+        return -1;
+    }
+    }
 
-            if (mode.equals("kelas")) {
-                if (view.cbFilterKelas.getSelectedItem() == null) return;
-                int id = Integer.parseInt(view.cbFilterKelas.getSelectedItem().toString().split("\\. ")[0]);
-                data = model.getJadwalByKelas(id);
-                for (String[] row : data) {
-                    tbl.addRow(new Object[]{row[0], row[1], view.cbFilterKelas.getSelectedItem().toString().split("\\. ", 2)[1], row[2], row[3]});
-                }
-            } else {
-                if (view.cbFilterGuru.getSelectedItem() == null) return;
-                int id = Integer.parseInt(view.cbFilterGuru.getSelectedItem().toString().split("\\. ")[0]);
-                data = model.getJadwalByGuru(id);
-                for (String[] row : data) {
-                    tbl.addRow(new Object[]{row[0], row[1], row[2], row[3], view.cbFilterGuru.getSelectedItem().toString().split("\\. ", 2)[1]});
-                }
+    private String convertJamKeToTime(int jamKe) {
+    // Validasi input
+    if (jamKe < 1) {
+        return "Invalid";
+    }
+    
+    // Jam ke 1 = 06.30-07.00, Jam ke 2 = 07.00-07.30, dst.
+    // Setiap jam pelajaran = 30 menit
+    int startMinutes = (6 * 60) + 30 + ((jamKe - 1) * 30); // 06.30 + (jamKe-1)*30 menit
+    int endMinutes = startMinutes + 30;
+    
+    // Konversi menit ke jam dan menit
+    int startHour = startMinutes / 60;
+    int startMin = startMinutes % 60;
+    int endHour = endMinutes / 60;
+    int endMin = endMinutes % 60;
+    
+    // Handle edge case jika melebihi 24 jam (tidak seharusnya terjadi dalam konteks sekolah)
+    if (startHour >= 24) startHour = startHour % 24;
+    if (endHour >= 24) endHour = endHour % 24;
+    
+    return String.format("%02d.%02d-%02d.%02d", startHour, startMin, endHour, endMin);
+    }
+
+    // Fungsi tambahan untuk mendapatkan daftar waktu yang tersedia
+    public String[] getAvailableTimeSlots() {
+    String[] timeSlots = new String[10]; // Assumsi maksimal 10 jam pelajaran
+    for (int i = 1; i <= 10; i++) {
+        timeSlots[i-1] = "Jam ke-" + i + " (" + convertJamKeToTime(i) + ")";
+    }
+    return timeSlots;
+    }
+
+    private boolean isValidTimeFormat(String waktu) {
+    if (waktu == null || waktu.trim().isEmpty()) {
+        return false;
+    }
+    
+    // Format yang diharapkan: HH.MM-HH.MM
+    String pattern = "\\d{2}\\.\\d{2}-\\d{2}\\.\\d{2}";
+    return waktu.matches(pattern);
+    }
+    
+    private void tambahMapel() {
+        try {
+            String namaMapel = view.getTxtTambahMapel().getText().trim();
+            
+            // Validasi input
+            if (namaMapel.isEmpty()) {
+                JOptionPane.showMessageDialog(view, "Nama mata pelajaran tidak boleh kosong!", "Peringatan", JOptionPane.WARNING_MESSAGE);
+                return;
             }
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(view, "Gagal menampilkan jadwal: " + e.getMessage());
+            
+            // Konfirmasi sebelum menambah
+            int konfirmasi = JOptionPane.showConfirmDialog(view, 
+                "Apakah Anda yakin ingin menambahkan mata pelajaran: " + namaMapel + "?", 
+                "Konfirmasi", 
+                JOptionPane.YES_NO_OPTION);
+            
+            if (konfirmasi == JOptionPane.YES_OPTION) {
+                // Panggil method tambahMapel dari model
+                model.tambahMapel(namaMapel);
+                
+                // Refresh combo box mapel untuk menampilkan data terbaru
+                refreshComboBoxMapel();
+                
+                // Bersihkan field input
+                view.getTxtTambahMapel().setText("");
+                
+                // Tampilkan pesan sukses
+                JOptionPane.showMessageDialog(view, "Mata pelajaran '" + namaMapel + "' berhasil ditambahkan!", "Sukses", JOptionPane.INFORMATION_MESSAGE);
+            }
+            
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(view, "Gagal menambahkan mata pelajaran: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
+
+     private void refreshComboBoxMapel() {
+        try {
+        // Simpan pilihan sebelumnya untuk mempertahankan seleksi user
+        Object selectedMapel = view.getCbMapel().getSelectedItem();
+        
+        // Clear dan reload combo box mapel
+        view.getCbMapel().removeAllItems();
+        List<String[]> mapelList = model.getAllMapel();
+        
+        for (String[] m : mapelList) {
+            String mapelItem = m[0] + ". " + m[1];
+            view.getCbMapel().addItem(mapelItem);
+        }
+        
+        // Restore pilihan sebelumnya jika masih ada
+        if (selectedMapel != null) {
+            for (int i = 0; i < view.getCbMapel().getItemCount(); i++) {
+                if (view.getCbMapel().getItemAt(i).equals(selectedMapel)) {
+                    view.getCbMapel().setSelectedIndex(i);
+                    break;
+                }
+            }
+        }
+        
+        // Refresh tampilan jadwal jika ada filter yang aktif
+        refreshTampilanJadwal();
+        
+    } catch (Exception e) {
+        JOptionPane.showMessageDialog(view, 
+            "Gagal memuat ulang data mata pelajaran: " + e.getMessage(), 
+            "Error", 
+            JOptionPane.ERROR_MESSAGE);
+    }
+    }
+
+    private void refreshTampilanJadwal() {
+    try {
+        // Cek filter mana yang aktif dan refresh sesuai filter tersebut
+        if (view.cbFilterKelas.getSelectedItem() != null && 
+            !view.cbFilterKelas.getSelectedItem().toString().trim().isEmpty()) {
+            tampilkanJadwal("kelas");
+        } else if (view.cbFilterGuru.getSelectedItem() != null && 
+                   !view.cbFilterGuru.getSelectedItem().toString().trim().isEmpty()) {
+            tampilkanJadwal("guru");
+        }
+    } catch (Exception e) {
+        // Silent fail untuk refresh tampilan
+        System.err.println("Warning: Gagal refresh tampilan jadwal - " + e.getMessage());
+    }
+    }
+
+    private void tampilkanJadwal(String mode) {
+        try {
+        DefaultTableModel tbl = (DefaultTableModel) view.tableJadwal.getModel();
+        tbl.setRowCount(0);
+        List<String[]> data;
+
+        if (mode.equals("kelas")) {
+            if (view.cbFilterKelas.getSelectedItem() == null) return;
+            int id = Integer.parseInt(view.cbFilterKelas.getSelectedItem().toString().split("\\. ")[0]);
+            data = model.getJadwalByKelas(id);
+            
+            for (String[] row : data) {
+                // row[0] = hari, row[1] = jam_ke, row[2] = mapel, row[3] = guru
+                String hari = row[0];
+                int jamKe = Integer.parseInt(row[1]);
+                String waktuFormatted = convertJamKeToTime(jamKe); // Konversi jam ke ke waktu
+                String kelas = view.cbFilterKelas.getSelectedItem().toString().split("\\. ", 2)[1];
+                String mapel = row[2];
+                String guru = row[3];
+                
+                tbl.addRow(new Object[]{hari, waktuFormatted, kelas, mapel, guru});
+            }
+        } else {
+            if (view.cbFilterGuru.getSelectedItem() == null) return;
+            int id = Integer.parseInt(view.cbFilterGuru.getSelectedItem().toString().split("\\. ")[0]);
+            data = model.getJadwalByGuru(id);
+            
+            for (String[] row : data) {
+                // row[0] = hari, row[1] = jam_ke, row[2] = kelas, row[3] = mapel
+                String hari = row[0];
+                int jamKe = Integer.parseInt(row[1]);
+                String waktuFormatted = convertJamKeToTime(jamKe); // Konversi jam ke ke waktu
+                String kelas = row[2];
+                String mapel = row[3];
+                String guru = view.cbFilterGuru.getSelectedItem().toString().split("\\. ", 2)[1];
+                
+                tbl.addRow(new Object[]{hari, waktuFormatted, kelas, mapel, guru});
+            }
+        }
+    } catch (Exception e) {
+        JOptionPane.showMessageDialog(view, 
+            "Gagal menampilkan jadwal: " + e.getMessage(), 
+            "Error", 
+            JOptionPane.ERROR_MESSAGE);
+    }
+    }
+
 
     private void eksporCSV() {
         try {
