@@ -388,18 +388,19 @@ public void openWaliKelasModule() {
         
         switch (module.toLowerCase()) {
             case "peminjaman":
-                return true;
+                return role.equals("staff") || role.equals("kepala_sekolah");
             case "absensi":
-                return role.equals("guru") || role.equals("staff") || role.equals("kepala_sekolah");
+                return role.equals("guru") || role.equals("kepala_sekolah");
             case "nilai":
                 return role.equals("guru") || role.equals("kepala_sekolah");
             case "jadwal":
-                return true;
+                return role.equals("guru") || role.equals("kepala_sekolah");
             case "inventaris":
                 return role.equals("staff") || role.equals("kepala_sekolah");
             default:
                 return false;
         }
+        
     }
 
     private void handleLogout() {
