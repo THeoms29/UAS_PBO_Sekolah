@@ -1,0 +1,3 @@
+Sebelum RUN UAS_PBO_Sekolah.jar pastikan sudah membuat database dan dijalankan di lokal.
+
+Lokasi file SQL: src/shared/sistem_sekolah.sql
