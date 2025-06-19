@@ -391,8 +391,6 @@ public void openWaliKelasModule() {
                 return role.equals("staff") || role.equals("kepala_sekolah");
             case "absensi":
                 return role.equals("guru") || role.equals("kepala_sekolah");
-            case "nilai":
-                return role.equals("guru") || role.equals("kepala_sekolah");
             case "jadwal":
                 return role.equals("guru") || role.equals("kepala_sekolah");
             case "inventaris":
